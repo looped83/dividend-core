@@ -394,6 +394,90 @@
     .risk-table th { padding: 10px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--txt2); font-weight: 600; background: var(--bg3); border-bottom: 1px solid var(--border); text-align: left; }
     .risk-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
     .risk-table tr:last-child td { border-bottom: none; }
+
+    /* ── Freiheit ────────────────────────────────────────────────────── */
+    .freedom-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .freedom-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+    }
+    .freedom-emoji { font-size: 1.5rem; margin-bottom: 8px; display: block; }
+    .freedom-label { font-size: 10px; color: var(--txt2); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+    .freedom-value { font-size: 1.35rem; font-weight: 800; margin-bottom: 4px; }
+    .freedom-sub   { font-size: 11px; color: var(--txt2); line-height: 1.4; }
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 800px) { .compare-grid { grid-template-columns: 1fr; } }
+    .fun-facts { display: flex; flex-direction: column; gap: 10px; }
+    .fun-fact-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 11px 14px;
+      background: var(--bg3);
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .fun-fact-icon { font-size: 1.5rem; flex-shrink: 0; }
+    .fun-fact-text strong { color: var(--green); }
+    .fire-section {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+    .fire-section h3 { font-size: 13px; font-weight: 600; color: var(--txt2); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 16px; }
+    .fire-numbers { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .fire-label { font-size: 11px; color: var(--txt2); margin-bottom: 4px; }
+    .fire-val   { font-size: 1.1rem; font-weight: 700; }
+
+    /* ── Kalender ────────────────────────────────────────────────────── */
+    .cal-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .cal-month {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .cal-month::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 0 0 12px 12px;
+    }
+    .cal-month.cal-top::after    { background: var(--green); }
+    .cal-month.cal-high::after   { background: rgba(63,185,80,.6); }
+    .cal-month.cal-med::after    { background: var(--blue); }
+    .cal-month.cal-low::after    { background: var(--border); }
+    .cal-name   { font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; color: var(--txt2); }
+    .cal-gross  { font-size: 1.1rem; font-weight: 800; }
+    .cal-net    { font-size: 11px; color: var(--green); margin-bottom: 6px; }
+    .cal-payers { font-size: 10px; color: var(--txt2); line-height: 1.6; }
   </style>
 </head>
 <body>
@@ -521,6 +605,8 @@
       <button class="tab-btn" data-tab="dividenden">Dividenden</button>
       <button class="tab-btn" data-tab="wachstum">Wachstum</button>
       <button class="tab-btn" data-tab="meilensteine">Meilensteine</button>
+      <button class="tab-btn" data-tab="freiheit">Freiheit</button>
+      <button class="tab-btn" data-tab="kalender">Kalender</button>
       <button class="tab-btn" data-tab="analyse">Analyse</button>
       <button class="tab-btn" data-tab="positionen">Positionen</button>
     </div>
@@ -547,6 +633,10 @@
         <div class="chart-card">
           <h3>Top 10 nach Dividenden-Beitrag</h3>
           <div class="top-list" id="top-by-div"></div>
+        </div>
+        <div class="chart-card">
+          <h3>Top 10 nach Yield-on-Cost</h3>
+          <div class="top-list" id="top-by-yoc"></div>
         </div>
       </div>
     </div>
@@ -584,6 +674,10 @@
           <h3>Yield vs. Yield-on-Cost</h3>
           <canvas id="chart-yoc"></canvas>
         </div>
+        <div class="chart-card">
+          <h3>Einkommenspfad – Netto-Projektion mit Zielgerade</h3>
+          <canvas id="chart-income-path"></canvas>
+        </div>
       </div>
       <div class="chart-card">
         <h3>Projektierte Dividendenentwicklung</h3>
@@ -609,6 +703,35 @@
         <h3>Meilensteinpfad – Netto-Dividenden vs. Zielwerte</h3>
         <canvas id="chart-milestone-path" style="max-height:280px"></canvas>
       </div>
+    </div>
+
+    <!-- Tab: Freiheit -->
+    <div class="tab-panel" id="tab-freiheit">
+      <div class="freedom-grid" id="freedom-metrics"></div>
+      <div class="compare-grid">
+        <div class="chart-card">
+          <h3>Einkommensvergleich</h3>
+          <canvas id="chart-income-compare" style="max-height:300px"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Was deine Dividenden bedeuten</h3>
+          <div class="fun-facts" id="fun-facts"></div>
+        </div>
+      </div>
+      <div class="fire-section">
+        <h3>FIRE-Rechner (Financial Independence)</h3>
+        <div class="fire-numbers" id="fire-numbers"></div>
+        <div class="goal-bar-item">
+          <label><span>Fortschritt zur FIRE-Zahl (4%-Regel)</span><span id="fire-pct-label">–</span></label>
+          <div class="bar-track"><div class="bar-fill bar-blue" id="fire-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Kalender -->
+    <div class="tab-panel" id="tab-kalender">
+      <div class="cal-summary" id="cal-summary"></div>
+      <div class="cal-grid" id="cal-grid"></div>
     </div>
 
     <!-- Tab: Analyse -->
@@ -776,6 +899,25 @@ function groupBy(holdings, key, valueKey) {
     map[k] = (map[k] || 0) + h[valueKey];
   });
   return map;
+}
+
+// ── Detailed monthly breakdown (gross + top payers per month) ────────
+function monthlyBreakdown(holdings) {
+  const months = Array.from({length:12}, () => ({ gross: 0, payers: [] }));
+  holdings.forEach(h => {
+    if (h.quantity <= 0 || h.totalDividendRate <= 0) return;
+    const freq = h.dividendFrequency, ann = h.totalDividendRate;
+    const pm = h.payDate ? new Date(h.payDate).getMonth() : 0;
+    const add = (m, amt) => { months[m].gross += amt; months[m].payers.push({ symbol: h.symbol, amount: amt }); };
+    switch (freq) {
+      case 'monthly':     for (let i=0;i<12;i++) add(i, ann/12); break;
+      case 'quarterly':   for (let i=0;i<4;i++) add((pm+i*3)%12, ann/4); break;
+      case 'biannually':  add(pm%12, ann/2); add((pm+6)%12, ann/2); break;
+      case 'annually':    add(pm%12, ann); break;
+    }
+  });
+  months.forEach(m => m.payers.sort((a,b) => b.amount - a.amount));
+  return months;
 }
 
 // ── Weighted average CAGR (by dividend contribution) ─────────────────
@@ -980,6 +1122,18 @@ function renderUebersicht(held) {
       <div class="top-name">${h.name}<small>${h.symbol} &middot; ${fmtPct(h.dividendYield)}</small></div>
       <div class="top-val pos">${fmtEur(h.totalDividendRate, 0)}</div>
     </div>`).join('');
+
+  // Top 10 by Yield-on-Cost (return on original purchase price)
+  const topYoC = [...held].filter(h => h.dividendYieldOnBuyin > 0 && h.buyinTotal > 0)
+    .sort((a,b) => b.dividendYieldOnBuyin - a.dividendYieldOnBuyin).slice(0, 10);
+  document.getElementById('top-by-yoc').innerHTML = topYoC.map((h, i) => {
+    const yocGain = h.dividendYieldOnBuyin - h.dividendYield;
+    return `<div class="top-item">
+      <span class="top-rank">${i+1}</span>
+      <div class="top-name">${h.name}<small>${h.symbol} &middot; ${yocGain > 0.003 ? '↑ ' : ''}aktuell ${fmtPct(h.dividendYield)}</small></div>
+      <div class="top-val ${yocGain > 0.003 ? 'pos' : ''}">${fmtPct(h.dividendYieldOnBuyin)}</div>
+    </div>`;
+  }).join('');
 }
 
 // ── Render Dividenden Tab ─────────────────────────────────────────────
@@ -1059,6 +1213,33 @@ function renderWachstum(held) {
     { tooltipCb: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw.toFixed(2)} %` } }
   );
 
+  // Income path line chart (years 0–12)
+  const totalGrossW = held.reduce((s,h) => s + h.totalDividendRate, 0);
+  const avgCagrW    = weightedAvgCagr(held);
+  const yearLabels  = Array.from({length:13}, (_,i) => i === 0 ? 'Heute' : 'J+'+i);
+  const netPath     = yearLabels.map((_,i) => Math.round(totalGrossW * Math.pow(1+avgCagrW,i) * (1-TAX)));
+  const grossPath   = yearLabels.map((_,i) => Math.round(totalGrossW * Math.pow(1+avgCagrW,i)));
+  destroyChart('chart-income-path');
+  new Chart(document.getElementById('chart-income-path').getContext('2d'), {
+    type: 'line',
+    data: { labels: yearLabels, datasets: [
+      { label: 'Netto', data: netPath, borderColor:'#3fb950', backgroundColor:'rgba(63,185,80,.08)', fill:true, tension:.35, pointRadius:4, pointHoverRadius:6 },
+      { label: 'Brutto', data: grossPath, borderColor:'#58a6ff', backgroundColor:'transparent', tension:.35, pointRadius:3 },
+      { label: 'Ziel 42.000 €', data: Array(13).fill(GOAL), borderColor:'rgba(240,136,62,.7)', borderDash:[6,4], pointRadius:0, borderWidth:2 }
+    ]},
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins: {
+        legend: { labels: { color:'#8b949e', font:{size:11} } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmtEur(ctx.raw,0)}` } }
+      },
+      scales: {
+        x: { grid:{color:'#21262d'}, ticks:{color:'#8b949e',font:{size:11}} },
+        y: { grid:{color:'#21262d'}, ticks:{color:'#8b949e',font:{size:11}, callback: v => fmtEur(v,0)} }
+      }
+    }
+  });
+
   // Projection table
   const totalGross = held.reduce((s, h) => s + h.totalDividendRate, 0);
   const avgCagr    = weightedAvgCagr(held);
@@ -1084,6 +1265,147 @@ function renderWachstum(held) {
       <td style="color:var(--txt2)">${growth}</td>
     </tr>`;
   }
+}
+
+// ── Render Freiheit Tab ───────────────────────────────────────────────
+const MINDESTLOHN    = 12.41 * 2080;  // ~25,813 € gross/year (40h × 52w)
+const AVG_NETTO      = 26400;         // ~2,200 €/mo average German net salary
+const AVG_MIETE      = 9600;          // ~800 €/mo avg rent including utilities
+const FIRE_SWR       = 0.04;          // 4% safe withdrawal rate
+
+function renderFreiheit(held) {
+  const grossDiv = held.reduce((s,h) => s + h.totalDividendRate, 0);
+  const netDiv   = grossDiv * (1 - TAX);
+  const totalVal = held.reduce((s,h) => s + h.value, 0);
+  const totalInv = held.reduce((s,h) => s + h.buyinTotal, 0);
+
+  const perHour   = netDiv / (365 * 24);
+  const perSleep  = netDiv / (365 * 8);
+  const freeHours = netDiv / (MINDESTLOHN / 2080);   // freed hours vs. min wage
+  const pctGehalt = netDiv / AVG_NETTO * 100;
+  const mieten    = netDiv / AVG_MIETE;
+  const swr4pct   = totalVal * FIRE_SWR * (1 - TAX);
+
+  document.getElementById('freedom-metrics').innerHTML = `
+    <div class="freedom-card">
+      <span class="freedom-emoji">⏱️</span>
+      <div class="freedom-label">Passiv verdient pro Stunde</div>
+      <div class="freedom-value pos">${fmtEur(perHour, 2)}</div>
+      <div class="freedom-sub">rund um die Uhr, auch im Schlaf</div>
+    </div>
+    <div class="freedom-card">
+      <span class="freedom-emoji">😴</span>
+      <div class="freedom-label">Verdienst pro Schlafnacht (8h)</div>
+      <div class="freedom-value pos">${fmtEur(perSleep * 8, 2)}</div>
+      <div class="freedom-sub">während du schläfst</div>
+    </div>
+    <div class="freedom-card">
+      <span class="freedom-emoji">🕓</span>
+      <div class="freedom-label">Freigestellte Arbeitsstunden/Jahr</div>
+      <div class="freedom-value neu">${Math.round(freeHours).toLocaleString('de-DE')}</div>
+      <div class="freedom-sub">vs. Mindestlohn (${fmtEur(MINDESTLOHN/2080, 2)}/h)</div>
+    </div>
+    <div class="freedom-card">
+      <span class="freedom-emoji">💼</span>
+      <div class="freedom-label">% des deutschen Ø-Nettogehalts</div>
+      <div class="freedom-value ${pctGehalt >= 100 ? 'pos' : ''}">${pctGehalt.toFixed(0)}%</div>
+      <div class="freedom-sub">Ø-Nettolohn ~${fmtEur(AVG_NETTO, 0)}/Jahr</div>
+    </div>
+    <div class="freedom-card">
+      <span class="freedom-emoji">🏠</span>
+      <div class="freedom-label">Monate Miet-Freiheit</div>
+      <div class="freedom-value">${mieten.toFixed(1)}</div>
+      <div class="freedom-sub">Monate Miete/Nebenkosten gedeckt</div>
+    </div>
+    <div class="freedom-card">
+      <span class="freedom-emoji">📊</span>
+      <div class="freedom-label">4%-Regel Entnahme (aktuell)</div>
+      <div class="freedom-value neu">${fmtEur(swr4pct, 0)}/Jahr</div>
+      <div class="freedom-sub">basierend auf aktuellem Depotwert</div>
+    </div>`;
+
+  // Income compare bar chart
+  const tagesgeld = totalInv * 0.035 * (1 - TAX);  // ~3.5% savings rate net
+  barChart('chart-income-compare',
+    ['Tagesgeld\n(3,5%)', 'Deine\nDividenden\n(Netto)', 'Dein\nZiel', 'Ø-Gehalt\n(Netto)'],
+    [{ label: '€/Jahr', data: [Math.round(tagesgeld), Math.round(netDiv), GOAL, AVG_NETTO],
+       backgroundColor: ['rgba(88,166,255,.5)','rgba(63,185,80,.8)','rgba(240,136,62,.7)','rgba(188,140,255,.6)'],
+       borderRadius: 6 }],
+    { legend: false, tooltipCb: { label: ctx => ` ${fmtEur(ctx.raw, 0)}/Jahr` } }
+  );
+
+  // Fun facts
+  const netflix   = Math.floor(netDiv / 239.88);
+  const kaffee    = Math.floor(netDiv / (3.5 * 365));
+  const tankfull  = Math.floor(netDiv / 90);  // ~50L × 1.80€
+  const bahn      = Math.floor(netDiv / 696); // Deutschlandticket 58€/mo
+  const wochend   = Math.floor(netDiv / 250); // avg German weekend trip
+  const divPerDay = Math.round(netDiv / 365);
+  document.getElementById('fun-facts').innerHTML = [
+    { icon:'☕', text:`Du könntest täglich <strong>${kaffee > 0 ? kaffee : '< 1'} Kaffee${kaffee!==1?'s':''}</strong> von deinen Dividenden trinken` },
+    { icon:'⛽', text:`Das sind <strong>${tankfull} volle Tankfüllungen</strong> pro Jahr` },
+    { icon:'🎬', text:`Du könntest <strong>${netflix} Netflix-Jahresabos</strong> auf einmal bezahlen` },
+    { icon:'🚂', text:`Das entspricht <strong>${bahn} Deutschlandticket${bahn!==1?'s':''}</strong> (58 €/Monat)` },
+    { icon:'🧳', text:`Du könntest <strong>${wochend} Wochenendtrips</strong> zusätzlich machen` },
+    { icon:'💶', text:`Jeden Tag landen automatisch <strong>${fmtEur(divPerDay,0)}</strong> auf deinem Konto` },
+  ].map(f => `<div class="fun-fact-item"><span class="fun-fact-icon">${f.icon}</span><span class="fun-fact-text">${f.text}</span></div>`).join('');
+
+  // FIRE section
+  const fireNumber = GOAL / (1 - TAX) / FIRE_SWR;  // gross needed for 42k net at 4%
+  const firePct    = Math.min(totalVal / fireNumber * 100, 100);
+  document.getElementById('fire-numbers').innerHTML = `
+    <div><div class="fire-label">FIRE-Zahl (4%-Regel für 42k Netto)</div><div class="fire-val">${fmtEur(fireNumber, 0)}</div></div>
+    <div><div class="fire-label">Dein aktueller Depotwert</div><div class="fire-val neu">${fmtEur(totalVal, 0)}</div></div>
+    <div><div class="fire-label">Fehlend bis FIRE-Zahl</div><div class="fire-val ${totalVal >= fireNumber ? 'pos' : ''}">${fmtEur(Math.max(fireNumber - totalVal, 0), 0)}</div></div>
+    <div><div class="fire-label">FIRE-Fortschritt</div><div class="fire-val ${firePct >= 100 ? 'pos' : ''}">${firePct.toFixed(1)}%</div></div>`;
+  document.getElementById('fire-pct-label').textContent  = firePct.toFixed(1) + '%';
+  document.getElementById('fire-bar').style.width = firePct.toFixed(1) + '%';
+}
+
+// ── Render Kalender Tab ───────────────────────────────────────────────
+function renderKalender(held) {
+  const bd    = monthlyBreakdown(held);
+  const maxG  = Math.max(...bd.map(m => m.gross));
+  const minG  = Math.min(...bd.filter(m => m.gross > 0).map(m => m.gross));
+  const sumG  = bd.reduce((s,m) => s + m.gross, 0);
+  const avgG  = sumG / 12;
+  const bestM = bd.indexOf(bd.reduce((a,b) => b.gross > a.gross ? b : a));
+  const weakM = bd.indexOf(bd.reduce((a,b) => b.gross < a.gross ? b : a));
+
+  document.getElementById('cal-summary').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">Stärkster Monat</div>
+      <div class="kpi-value pos">${MONTHS_DE[bestM]}: ${fmtEur(maxG, 0)}</div>
+      <div class="kpi-sub">Netto: ${fmtEur(maxG*(1-TAX), 0)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Schwächster Monat</div>
+      <div class="kpi-value">${MONTHS_DE[weakM]}: ${fmtEur(minG, 0)}</div>
+      <div class="kpi-sub">Netto: ${fmtEur(minG*(1-TAX), 0)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Ø pro Monat</div>
+      <div class="kpi-value neu">${fmtEur(avgG, 0)}</div>
+      <div class="kpi-sub">Netto: ${fmtEur(avgG*(1-TAX), 0)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Spread (stark / schwach)</div>
+      <div class="kpi-value">${maxG > 0 ? (maxG/minG).toFixed(1) : '–'}×</div>
+      <div class="kpi-sub">Einkommensschwankung</div>
+    </div>`;
+
+  const MONTHS_FULL = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  document.getElementById('cal-grid').innerHTML = bd.map((m, i) => {
+    const pct = maxG > 0 ? m.gross / maxG : 0;
+    const cls = pct >= 0.8 ? 'cal-top' : pct >= 0.5 ? 'cal-high' : pct >= 0.2 ? 'cal-med' : 'cal-low';
+    const top3 = m.payers.slice(0,4).map(p => `${p.symbol} (${fmtEur(p.amount,0)})`).join(' · ');
+    return `<div class="cal-month ${cls}">
+      <div class="cal-name">${MONTHS_FULL[i]}</div>
+      <div class="cal-gross">${fmtEur(m.gross, 0)}</div>
+      <div class="cal-net">Netto: ${fmtEur(m.gross*(1-TAX), 0)}</div>
+      <div class="cal-payers">${top3 || '–'}</div>
+    </div>`;
+  }).join('');
 }
 
 // ── Render Meilensteine Tab ───────────────────────────────────────────
@@ -1335,6 +1657,8 @@ function renderAll(rows, filename) {
   renderDividenden(held);
   renderWachstum(held);
   renderMeilensteine(held);
+  renderFreiheit(held);
+  renderKalender(held);
   renderAnalyse(held);
   renderPositions(rows);
 
