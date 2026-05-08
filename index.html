@@ -603,12 +603,12 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="uebersicht">Übersicht</button>
       <button class="tab-btn" data-tab="dividenden">Dividenden</button>
-      <button class="tab-btn" data-tab="wachstum">Wachstum</button>
-      <button class="tab-btn" data-tab="meilensteine">Meilensteine</button>
-      <button class="tab-btn" data-tab="freiheit">Freiheit</button>
       <button class="tab-btn" data-tab="kalender">Kalender</button>
       <button class="tab-btn" data-tab="analyse">Analyse</button>
+      <button class="tab-btn" data-tab="wachstum">Wachstum</button>
       <button class="tab-btn" data-tab="positionen">Positionen</button>
+      <button class="tab-btn" data-tab="meilensteine">Meilensteine</button>
+      <button class="tab-btn" data-tab="freiheit">Freiheit</button>
     </div>
 
     <!-- Tab: Übersicht -->
@@ -656,6 +656,10 @@
           <h3>Dividenden nach Asset-Klasse</h3>
           <canvas id="chart-div-type"></canvas>
         </div>
+      </div>
+      <div class="chart-card wide">
+        <h3>Monatliches Einkommen nach Sektor (gestapelt)</h3>
+        <canvas id="chart-monthly-sector" style="max-height:320px"></canvas>
       </div>
     </div>
 
@@ -899,6 +903,25 @@ function groupBy(holdings, key, valueKey) {
     map[k] = (map[k] || 0) + h[valueKey];
   });
   return map;
+}
+
+// ── Monthly income split by sector ───────────────────────────────────
+function monthlyBySector(holdings) {
+  const sectors = {};
+  holdings.forEach(h => {
+    if (h.quantity <= 0 || h.totalDividendRate <= 0) return;
+    const s = h.sector || h.securityType || 'Sonstige';
+    if (!sectors[s]) sectors[s] = new Array(12).fill(0);
+    const freq = h.dividendFrequency, ann = h.totalDividendRate;
+    const pm   = h.payDate ? new Date(h.payDate).getMonth() : 0;
+    switch (freq) {
+      case 'monthly':    for (let i=0;i<12;i++) sectors[s][i] += ann/12; break;
+      case 'quarterly':  for (let i=0;i<4;i++) sectors[s][(pm+i*3)%12] += ann/4; break;
+      case 'biannually': sectors[s][pm%12] += ann/2; sectors[s][(pm+6)%12] += ann/2; break;
+      case 'annually':   sectors[s][pm%12] += ann; break;
+    }
+  });
+  return sectors;
 }
 
 // ── Detailed monthly breakdown (gross + top payers per month) ────────
@@ -1163,6 +1186,21 @@ function renderDividenden(held) {
   const typeDiv = groupBy(held.filter(h => h.totalDividendRate > 0), 'securityType', 'totalDividendRate');
   const tdKeys = Object.keys(typeDiv).sort((a,b) => typeDiv[b] - typeDiv[a]);
   doughnutChart('chart-div-type', tdKeys, tdKeys.map(k => typeDiv[k]));
+
+  // Monthly stacked by sector
+  const bySector  = monthlyBySector(held);
+  const secKeys   = Object.keys(bySector).sort((a,b) =>
+    bySector[b].reduce((s,v)=>s+v,0) - bySector[a].reduce((s,v)=>s+v,0));
+  barChart('chart-monthly-sector', MONTHS_DE,
+    secKeys.map((s, i) => ({
+      label: s,
+      data:  bySector[s].map(v => Math.round(v)),
+      backgroundColor: PALETTE[i % PALETTE.length],
+      borderRadius: 2,
+    })),
+    { stacked: true,
+      tooltipCb: { label: ctx => ` ${ctx.dataset.label}: ${fmtEur(ctx.raw, 0)}` } }
+  );
 }
 
 // ── Render Wachstum Tab ───────────────────────────────────────────────
