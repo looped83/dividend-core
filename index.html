@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dividenden Portfolio Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0d1117;
+      --bg2: #161b22;
+      --bg3: #21262d;
+      --green: #3fb950;
+      --green-dim: #1a4d2e;
+      --blue: #58a6ff;
+      --purple: #bc8cff;
+      --orange: #f0883e;
+      --red: #f85149;
+      --yellow: #e3b341;
+      --txt: #e6edf3;
+      --txt2: #8b949e;
+      --border: #30363d;
+      --goal: 42000;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--txt);
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    /* ── Upload Screen ───────────────────────────────────────────────── */
+    #upload-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 24px;
+      padding: 24px;
+    }
+    #upload-screen h1 { font-size: 2rem; font-weight: 700; }
+    #upload-screen p { color: var(--txt2); font-size: 1rem; }
+    #drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 16px;
+      padding: 60px 80px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      width: 100%;
+      max-width: 500px;
+    }
+    #drop-zone:hover, #drop-zone.drag-over {
+      border-color: var(--blue);
+      background: rgba(88,166,255,.06);
+    }
+    #drop-zone svg { margin-bottom: 16px; }
+    #drop-zone p { color: var(--txt2); margin-top: 8px; font-size: 0.85rem; }
+    #file-input { display: none; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--txt);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background .15s, border-color .15s;
+      text-decoration: none;
+    }
+    .btn:hover { background: #2d333b; border-color: var(--blue); }
+    .btn-primary {
+      background: var(--green-dim);
+      border-color: var(--green);
+      color: var(--green);
+    }
+    .btn-primary:hover { background: #225c38; }
+
+    /* ── Main Layout ─────────────────────────────────────────────────── */
+    #dashboard { display: none; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13,17,23,.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header h1 { font-size: 1.1rem; font-weight: 700; flex: 1; }
+    .header-meta { color: var(--txt2); font-size: 12px; }
+    #upload-new { font-size: 12px; }
+
+    .main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+    /* ── KPI Cards ───────────────────────────────────────────────────── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .kpi-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+    .kpi-label { color: var(--txt2); font-size: 11px; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
+    .kpi-value { font-size: 1.5rem; font-weight: 700; }
+    .kpi-sub { font-size: 11px; color: var(--txt2); margin-top: 4px; }
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+    .neu { color: var(--blue); }
+
+    /* ── Goal Section ────────────────────────────────────────────────── */
+    .goal-section {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 32px;
+      align-items: center;
+    }
+    @media (max-width: 700px) { .goal-section { grid-template-columns: 1fr; } }
+    .goal-ring-wrap { position: relative; width: 200px; height: 200px; margin: 0 auto; }
+    .goal-ring-wrap canvas { width: 200px !important; height: 200px !important; }
+    .goal-ring-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .goal-pct { font-size: 2rem; font-weight: 800; }
+    .goal-pct-label { font-size: 11px; color: var(--txt2); }
+    .goal-info h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
+    .goal-bars { display: flex; flex-direction: column; gap: 12px; }
+    .goal-bar-item label { display: flex; justify-content: space-between; font-size: 12px; color: var(--txt2); margin-bottom: 4px; }
+    .goal-bar-item label span:last-child { color: var(--txt); font-weight: 600; }
+    .bar-track { height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width .6s ease; }
+    .bar-green { background: linear-gradient(90deg, #3fb950, #56d364); }
+    .bar-blue  { background: linear-gradient(90deg, #58a6ff, #79bfff); }
+    .goal-remaining { margin-top: 16px; font-size: 13px; color: var(--txt2); }
+    .goal-remaining strong { color: var(--orange); }
+
+    /* ── Tabs ────────────────────────────────────────────────────────── */
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+    .tab-btn {
+      padding: 10px 20px;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--txt2);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: color .15s, border-color .15s;
+    }
+    .tab-btn:hover { color: var(--txt); }
+    .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Chart Grid ──────────────────────────────────────────────────── */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .chart-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .chart-card.wide { grid-column: 1 / -1; }
+    .chart-card h3 { font-size: 13px; font-weight: 600; color: var(--txt2); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 16px; }
+    .chart-card canvas { max-height: 280px; }
+
+    /* ── Table ───────────────────────────────────────────────────────── */
+    .table-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .table-header h3 { font-size: 14px; font-weight: 600; flex: 1; }
+    .search-box {
+      padding: 7px 12px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--txt);
+      font-size: 13px;
+      width: 200px;
+    }
+    .search-box::placeholder { color: var(--txt2); }
+    .search-box:focus { outline: none; border-color: var(--blue); }
+    select.filter-select {
+      padding: 7px 10px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--txt);
+      font-size: 13px;
+      cursor: pointer;
+    }
+    select.filter-select:focus { outline: none; border-color: var(--blue); }
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    thead th {
+      background: var(--bg3);
+      padding: 10px 12px;
+      text-align: left;
+      color: var(--txt2);
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid var(--border);
+    }
+    thead th:hover { color: var(--txt); }
+    thead th.sort-asc::after { content: ' ↑'; color: var(--blue); }
+    thead th.sort-desc::after { content: ' ↓'; color: var(--blue); }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--bg3); }
+    td { padding: 10px 12px; white-space: nowrap; }
+    .td-name { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+    .td-name strong { display: block; font-weight: 600; }
+    .td-name span { color: var(--txt2); font-size: 11px; }
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .badge-equity  { background: rgba(88,166,255,.15); color: var(--blue); }
+    .badge-etf     { background: rgba(188,140,255,.15); color: var(--purple); }
+    .badge-crypto  { background: rgba(240,136,62,.15); color: var(--orange); }
+    .badge-fund    { background: rgba(63,185,80,.15); color: var(--green); }
+
+    /* ── Upcoming Dividends ──────────────────────────────────────────── */
+    .upcoming-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .upcoming-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+    .upcoming-card .uc-name { font-weight: 600; font-size: 13px; }
+    .upcoming-card .uc-sym  { color: var(--txt2); font-size: 11px; margin-bottom: 8px; }
+    .upcoming-card .uc-row  { display: flex; justify-content: space-between; font-size: 11px; color: var(--txt2); margin-top: 3px; }
+    .upcoming-card .uc-row span { color: var(--txt); font-weight: 500; }
+
+    /* ── Top holdings list ───────────────────────────────────────────── */
+    .top-list { display: flex; flex-direction: column; gap: 6px; }
+    .top-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .top-item:last-child { border-bottom: none; }
+    .top-rank { color: var(--txt2); font-size: 12px; width: 20px; text-align: right; }
+    .top-name { flex: 1; font-weight: 500; font-size: 13px; }
+    .top-name small { display: block; color: var(--txt2); font-size: 10px; font-weight: 400; }
+    .top-val { font-size: 13px; font-weight: 600; text-align: right; }
+
+    /* ── Growth projection ───────────────────────────────────────────── */
+    .projection-table { width: 100%; font-size: 13px; }
+    .projection-table th { text-align: left; padding: 8px 12px; color: var(--txt2); font-weight: 600; font-size: 11px; border-bottom: 1px solid var(--border); }
+    .projection-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    .projection-table tr:last-child td { border-bottom: none; }
+
+    /* ── Tooltip ─────────────────────────────────────────────────────── */
+    .tooltip-label { white-space: nowrap; }
+
+    /* ── Utility ─────────────────────────────────────────────────────── */
+    .flex { display: flex; gap: 12px; align-items: center; }
+    .mt16 { margin-top: 16px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- ── Upload Screen ─────────────────────────────────────────────────── -->
+<div id="upload-screen">
+  <div style="text-align:center;">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+    <h1>Dividenden Portfolio Dashboard</h1>
+    <p style="margin-top:8px;">Lade deine DivvyDiary-CSV-Datei hoch, um dein Portfolio zu analysieren.</p>
+  </div>
+  <div id="drop-zone">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#8b949e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="17 8 12 3 7 8"/>
+      <line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+    <p style="font-size:1rem;color:#e6edf3;margin-top:12px;">CSV hierher ziehen oder klicken</p>
+    <p>DivvyDiary Portfolio Export (Semikolon-getrennt)</p>
+  </div>
+  <input type="file" id="file-input" accept=".csv">
+</div>
+
+<!-- ── Dashboard ─────────────────────────────────────────────────────── -->
+<div id="dashboard">
+  <header>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+    <h1>Dividenden Portfolio</h1>
+    <span class="header-meta" id="last-updated"></span>
+    <button class="btn" id="upload-new">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      CSV aktualisieren
+    </button>
+    <input type="file" id="file-input-2" accept=".csv" style="display:none">
+  </header>
+
+  <div class="main">
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Depotwert</div>
+        <div class="kpi-value neu" id="kpi-value">–</div>
+        <div class="kpi-sub" id="kpi-positions">– Positionen</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Investiert</div>
+        <div class="kpi-value" id="kpi-invested">–</div>
+        <div class="kpi-sub" id="kpi-gain-sub">Gewinn/Verlust</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Gesamtgewinn</div>
+        <div class="kpi-value" id="kpi-gain">–</div>
+        <div class="kpi-sub" id="kpi-gain-pct">–</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Jährl. Brutto-Dividenden</div>
+        <div class="kpi-value pos" id="kpi-div-gross">–</div>
+        <div class="kpi-sub" id="kpi-div-yield">Ø Rendite</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Jährl. Netto-Dividenden</div>
+        <div class="kpi-value pos" id="kpi-div-net">–</div>
+        <div class="kpi-sub">nach Abgeltungssteuer</div>
+      </div>
+    </div>
+
+    <!-- Goal Section -->
+    <div class="goal-section">
+      <div class="goal-ring-wrap">
+        <canvas id="goal-chart"></canvas>
+        <div class="goal-ring-center">
+          <div class="goal-pct" id="goal-pct-txt">0%</div>
+          <div class="goal-pct-label">von 42.000 €</div>
+        </div>
+      </div>
+      <div class="goal-info">
+        <h2>Ziel: 42.000 € jährliche Netto-Dividenden</h2>
+        <div class="goal-bars">
+          <div class="goal-bar-item">
+            <label><span>Netto-Dividenden</span><span id="gbar-net-val">0 €</span></label>
+            <div class="bar-track"><div class="bar-fill bar-green" id="gbar-net" style="width:0%"></div></div>
+          </div>
+          <div class="goal-bar-item">
+            <label><span>Brutto-Dividenden</span><span id="gbar-gross-val">0 €</span></label>
+            <div class="bar-track"><div class="bar-fill bar-blue" id="gbar-gross" style="width:0%"></div></div>
+          </div>
+        </div>
+        <div class="goal-remaining">
+          Noch <strong id="goal-missing">–</strong> bis zum Ziel &nbsp;·&nbsp;
+          Ø monatlich netto: <strong id="goal-monthly" style="color:var(--green)">–</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="uebersicht">Übersicht</button>
+      <button class="tab-btn" data-tab="dividenden">Dividenden</button>
+      <button class="tab-btn" data-tab="wachstum">Wachstum</button>
+      <button class="tab-btn" data-tab="positionen">Positionen</button>
+    </div>
+
+    <!-- Tab: Übersicht -->
+    <div class="tab-panel active" id="tab-uebersicht">
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>Sektorallokation (nach Dividende)</h3>
+          <canvas id="chart-sector"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Asset-Klassen</h3>
+          <canvas id="chart-type"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Länderallokation</h3>
+          <canvas id="chart-country"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Top 10 Positionen nach Depotwert</h3>
+          <div class="top-list" id="top-by-value"></div>
+        </div>
+        <div class="chart-card">
+          <h3>Top 10 nach Dividenden-Beitrag</h3>
+          <div class="top-list" id="top-by-div"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Dividenden -->
+    <div class="tab-panel" id="tab-dividenden">
+      <div class="chart-grid">
+        <div class="chart-card wide">
+          <h3>Monatliche Dividendeneinnahmen (Projektion)</h3>
+          <canvas id="chart-monthly" style="max-height:300px"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Zahlungsrhythmus</h3>
+          <canvas id="chart-freq"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Dividenden nach Asset-Klasse</h3>
+          <canvas id="chart-div-type"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>Nächste Dividendenzahlungen (innerhalb 60 Tage)</h3>
+        <div class="upcoming-grid" id="upcoming-divs"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Wachstum -->
+    <div class="tab-panel" id="tab-wachstum">
+      <div class="chart-grid">
+        <div class="chart-card wide">
+          <h3>Dividenden CAGR – Top 20 Positionen (5 Jahre)</h3>
+          <canvas id="chart-cagr" style="max-height:340px"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>CAGR-Verteilung</h3>
+          <canvas id="chart-cagr-dist"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Yield vs. Yield-on-Cost</h3>
+          <canvas id="chart-yoc"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>Projektierte Dividendenentwicklung</h3>
+        <table class="projection-table" id="projection-table">
+          <thead>
+            <tr>
+              <th>Jahr</th>
+              <th>Brutto (€)</th>
+              <th>Netto (€)</th>
+              <th>Zielfortschritt (Netto)</th>
+              <th>Wachstum ggü. Heute</th>
+            </tr>
+          </thead>
+          <tbody id="projection-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Positionen -->
+    <div class="tab-panel" id="tab-positionen">
+      <div class="table-header">
+        <h3>Alle Positionen</h3>
+        <input class="search-box" id="pos-search" placeholder="Suchen…">
+        <select class="filter-select" id="pos-filter-type">
+          <option value="">Alle Typen</option>
+          <option value="EQUITY">Aktien</option>
+          <option value="ETF">ETFs</option>
+          <option value="CRYPTO">Krypto</option>
+          <option value="FUND">Fonds</option>
+        </select>
+        <select class="filter-select" id="pos-filter-held">
+          <option value="held">Im Depot</option>
+          <option value="all">Alle inkl. Watchlist</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table id="pos-table">
+          <thead>
+            <tr>
+              <th data-col="name">Name</th>
+              <th data-col="value">Wert</th>
+              <th data-col="buyinTotal">Investiert</th>
+              <th data-col="gain">Gewinn</th>
+              <th data-col="gainRel">G/V %</th>
+              <th data-col="totalDividendRate">Dividende/J.</th>
+              <th data-col="dividendYield">Yield</th>
+              <th data-col="dividendYieldOnBuyin">YoC</th>
+              <th data-col="dividendCagr">CAGR</th>
+              <th data-col="dividendFrequency">Freq.</th>
+              <th data-col="sector">Sektor</th>
+            </tr>
+          </thead>
+          <tbody id="pos-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- .main -->
+</div><!-- #dashboard -->
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────
+const GOAL = 42000;
+const TAX  = 0.26375;
+const STORAGE_KEY = 'div_portfolio_csv';
+const MONTHS_DE = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+
+// ── Parse German number ───────────────────────────────────────────────
+function num(s) {
+  if (!s || s === '' || s === '-') return 0;
+  return parseFloat(s.toString().replace(',', '.')) || 0;
+}
+
+function fmtEur(n, decimals = 0) {
+  return n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: decimals, minimumFractionDigits: decimals });
+}
+
+function fmtPct(n) {
+  return (n * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' %';
+}
+
+// ── Parse CSV ─────────────────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(';').map(h => h.trim());
+  return lines.slice(1).map(line => {
+    const vals = line.split(';');
+    const row = {};
+    headers.forEach((h, i) => { row[h] = (vals[i] || '').trim(); });
+    // Numerics
+    ['quantity','buyin','buyinTotal','price','value','gain','gainRel',
+     'dividendYield','dividendYieldOnBuyin','totalDividendRate','dividendRate',
+     'dividendCagr','allocation','taxRate'].forEach(k => {
+      row[k] = num(row[k]);
+    });
+    return row;
+  }).filter(r => r.name);
+}
+
+// ── Monthly income projection ─────────────────────────────────────────
+function monthlyIncome(holdings) {
+  const months = new Array(12).fill(0);
+  holdings.forEach(h => {
+    if (h.quantity <= 0 || h.totalDividendRate <= 0) return;
+    const freq  = h.dividendFrequency;
+    const ann   = h.totalDividendRate;
+    const pm    = h.payDate ? new Date(h.payDate).getMonth() : 0;
+    switch (freq) {
+      case 'monthly':
+        for (let i = 0; i < 12; i++) months[i] += ann / 12;
+        break;
+      case 'quarterly':
+        for (let i = 0; i < 4; i++) months[(pm + i * 3) % 12] += ann / 4;
+        break;
+      case 'biannually':
+        months[pm % 12]       += ann / 2;
+        months[(pm + 6) % 12] += ann / 2;
+        break;
+      case 'annually':
+        months[pm % 12] += ann;
+        break;
+    }
+  });
+  return months;
+}
+
+// ── Aggregate by key ──────────────────────────────────────────────────
+function groupBy(holdings, key, valueKey) {
+  const map = {};
+  holdings.forEach(h => {
+    const k = h[key] || 'Sonstige';
+    map[k] = (map[k] || 0) + h[valueKey];
+  });
+  return map;
+}
+
+// ── Upcoming dividends (next 60 days) ────────────────────────────────
+function upcomingDivs(holdings) {
+  const today = new Date();
+  const limit = new Date(today); limit.setDate(limit.getDate() + 60);
+  return holdings
+    .filter(h => h.quantity > 0 && h.payDate)
+    .map(h => {
+      const pd = new Date(h.payDate);
+      const ex = new Date(h.exDate);
+      return { ...h, _payDate: pd, _exDate: ex };
+    })
+    .filter(h => h._payDate >= today && h._payDate <= limit)
+    .sort((a, b) => a._payDate - b._payDate);
+}
+
+// ── Chart helpers ─────────────────────────────────────────────────────
+const PALETTE = [
+  '#58a6ff','#3fb950','#bc8cff','#f0883e','#e3b341',
+  '#79bfff','#56d364','#d2a8ff','#ffb347','#f9e44a',
+  '#38d9a9','#ff6b6b','#74c0fc','#a9e34b','#da77f2'
+];
+
+function destroyChart(id) {
+  const c = Chart.getChart(id);
+  if (c) c.destroy();
+}
+
+function doughnutChart(id, labels, data, title) {
+  destroyChart(id);
+  const ctx = document.getElementById(id).getContext('2d');
+  return new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data, backgroundColor: PALETTE, borderColor: '#161b22', borderWidth: 2, hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      cutout: '65%',
+      plugins: {
+        legend: { position: 'right', labels: { color: '#8b949e', font: { size: 11 }, padding: 10, boxWidth: 12 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const tot = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              return ` ${ctx.label}: ${fmtEur(ctx.raw)} (${(ctx.raw/tot*100).toFixed(1)}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function barChart(id, labels, datasets, opts = {}) {
+  destroyChart(id);
+  const ctx = document.getElementById(id).getContext('2d');
+  return new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      indexAxis: opts.horizontal ? 'y' : 'x',
+      plugins: {
+        legend: { display: opts.legend !== false, labels: { color: '#8b949e', font: { size: 11 } } },
+        tooltip: { callbacks: opts.tooltipCb || {} }
+      },
+      scales: {
+        x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 } }, stacked: opts.stacked },
+        y: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 } }, stacked: opts.stacked }
+      }
+    }
+  });
+}
+
+// ── Render KPIs ───────────────────────────────────────────────────────
+function renderKPIs(held) {
+  const totalVal    = held.reduce((s, h) => s + h.value, 0);
+  const totalInv    = held.reduce((s, h) => s + h.buyinTotal, 0);
+  const totalGain   = held.reduce((s, h) => s + h.gain, 0);
+  const grossDiv    = held.reduce((s, h) => s + h.totalDividendRate, 0);
+  const netDiv      = grossDiv * (1 - TAX);
+  const gainRel     = totalInv > 0 ? totalGain / totalInv : 0;
+  const yieldCurr   = totalVal > 0 ? grossDiv / totalVal : 0;
+
+  document.getElementById('kpi-value').textContent      = fmtEur(totalVal);
+  document.getElementById('kpi-positions').textContent  = held.length + ' Positionen';
+  document.getElementById('kpi-invested').textContent   = fmtEur(totalInv);
+  document.getElementById('kpi-gain-sub').textContent   = (totalGain >= 0 ? '+' : '') + fmtEur(totalGain);
+  const kpiGain = document.getElementById('kpi-gain');
+  kpiGain.textContent = (gainRel >= 0 ? '+' : '') + fmtPct(gainRel);
+  kpiGain.className   = 'kpi-value ' + (gainRel >= 0 ? 'pos' : 'neg');
+  document.getElementById('kpi-gain-pct').textContent   = (totalGain >= 0 ? '+' : '') + fmtEur(totalGain);
+  document.getElementById('kpi-div-gross').textContent  = fmtEur(grossDiv, 0);
+  document.getElementById('kpi-div-yield').textContent  = 'Ø ' + fmtPct(yieldCurr) + ' Rendite';
+  document.getElementById('kpi-div-net').textContent    = fmtEur(netDiv, 0);
+
+  return { totalVal, totalInv, totalGain, grossDiv, netDiv, gainRel };
+}
+
+// ── Render Goal ───────────────────────────────────────────────────────
+let goalChartInst = null;
+function renderGoal(grossDiv, netDiv) {
+  const pct     = Math.min(netDiv / GOAL, 1);
+  const pctDisp = Math.min(netDiv / GOAL * 100, 100);
+  const missing = Math.max(GOAL - netDiv, 0);
+
+  document.getElementById('goal-pct-txt').textContent = Math.round(pctDisp) + '%';
+  document.getElementById('gbar-net-val').textContent  = fmtEur(netDiv, 0);
+  document.getElementById('gbar-gross-val').textContent = fmtEur(grossDiv, 0);
+  document.getElementById('gbar-net').style.width   = Math.min(pct * 100, 100) + '%';
+  document.getElementById('gbar-gross').style.width = Math.min(grossDiv / GOAL * 100, 100) + '%';
+  document.getElementById('goal-missing').textContent = fmtEur(missing, 0);
+  document.getElementById('goal-monthly').textContent = fmtEur(netDiv / 12, 0);
+
+  destroyChart('goal-chart');
+  const ctx = document.getElementById('goal-chart').getContext('2d');
+  goalChartInst = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [pct, 1 - pct],
+        backgroundColor: [pct >= 1 ? '#3fb950' : '#58a6ff', '#21262d'],
+        borderWidth: 0,
+        hoverOffset: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      cutout: '78%',
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      animation: { animateRotate: true, duration: 800 }
+    }
+  });
+}
+
+// ── Render Übersicht Tab ──────────────────────────────────────────────
+function renderUebersicht(held) {
+  // Sector donut (by dividend)
+  const sectorDiv = groupBy(held.filter(h => h.totalDividendRate > 0), 'sector', 'totalDividendRate');
+  const sKeys = Object.keys(sectorDiv).sort((a,b) => sectorDiv[b] - sectorDiv[a]);
+  doughnutChart('chart-sector', sKeys, sKeys.map(k => sectorDiv[k]));
+
+  // Asset type donut (by value)
+  const typeVal = groupBy(held, 'securityType', 'value');
+  const tKeys = Object.keys(typeVal).sort((a,b) => typeVal[b] - typeVal[a]);
+  doughnutChart('chart-type', tKeys, tKeys.map(k => typeVal[k]));
+
+  // Country donut (by value)
+  const countryVal = {};
+  held.forEach(h => {
+    const c = h.country || 'Sonstige';
+    countryVal[c] = (countryVal[c] || 0) + h.value;
+  });
+  const cKeys = Object.keys(countryVal).sort((a,b) => countryVal[b] - countryVal[a]).slice(0, 10);
+  doughnutChart('chart-country', cKeys, cKeys.map(k => countryVal[k]));
+
+  // Top 10 by value
+  const topVal = [...held].sort((a,b) => b.value - a.value).slice(0, 10);
+  document.getElementById('top-by-value').innerHTML = topVal.map((h, i) => `
+    <div class="top-item">
+      <span class="top-rank">${i+1}</span>
+      <div class="top-name">${h.name}<small>${h.symbol}</small></div>
+      <div class="top-val">${fmtEur(h.value, 0)}</div>
+    </div>`).join('');
+
+  // Top 10 by dividend
+  const topDiv = [...held].filter(h => h.totalDividendRate > 0).sort((a,b) => b.totalDividendRate - a.totalDividendRate).slice(0, 10);
+  document.getElementById('top-by-div').innerHTML = topDiv.map((h, i) => `
+    <div class="top-item">
+      <span class="top-rank">${i+1}</span>
+      <div class="top-name">${h.name}<small>${h.symbol} &middot; ${fmtPct(h.dividendYield)}</small></div>
+      <div class="top-val pos">${fmtEur(h.totalDividendRate, 0)}</div>
+    </div>`).join('');
+}
+
+// ── Render Dividenden Tab ─────────────────────────────────────────────
+function renderDividenden(held) {
+  const gross = monthlyIncome(held);
+  const net   = gross.map(v => v * (1 - TAX));
+
+  barChart('chart-monthly', MONTHS_DE, [
+    { label: 'Brutto', data: gross, backgroundColor: 'rgba(88,166,255,.7)', borderRadius: 4 },
+    { label: 'Netto',  data: net,   backgroundColor: 'rgba(63,185,80,.7)',  borderRadius: 4 }
+  ], {
+    stacked: false,
+    tooltipCb: { label: ctx => ` ${ctx.dataset.label}: ${fmtEur(ctx.raw, 0)}` }
+  });
+
+  // Frequency donut
+  const freqDiv = {};
+  held.filter(h => h.totalDividendRate > 0).forEach(h => {
+    const f = h.dividendFrequency || 'Sonstige';
+    freqDiv[f] = (freqDiv[f] || 0) + h.totalDividendRate;
+  });
+  const fKeys = Object.keys(freqDiv).sort((a,b) => freqDiv[b] - freqDiv[a]);
+  const freqLabels = { monthly: 'Monatlich', quarterly: 'Quartalsweise', annually: 'Jährlich', biannually: 'Halbjährlich', none: 'Keine' };
+  doughnutChart('chart-freq', fKeys.map(k => freqLabels[k] || k), fKeys.map(k => freqDiv[k]));
+
+  // Div by type
+  const typeDiv = groupBy(held.filter(h => h.totalDividendRate > 0), 'securityType', 'totalDividendRate');
+  const tdKeys = Object.keys(typeDiv).sort((a,b) => typeDiv[b] - typeDiv[a]);
+  doughnutChart('chart-div-type', tdKeys, tdKeys.map(k => typeDiv[k]));
+
+  // Upcoming
+  const upcoming = upcomingDivs(held);
+  const upEl = document.getElementById('upcoming-divs');
+  if (upcoming.length === 0) {
+    upEl.innerHTML = '<p style="color:var(--txt2);font-size:13px;">Keine Zahlungen in den nächsten 60 Tagen.</p>';
+  } else {
+    upEl.innerHTML = upcoming.map(h => `
+      <div class="upcoming-card">
+        <div class="uc-name">${h.name}</div>
+        <div class="uc-sym">${h.symbol}</div>
+        <div class="uc-row">Ex-Datum <span>${h.exDate}</span></div>
+        <div class="uc-row">Zahltag <span>${h.payDate}</span></div>
+        <div class="uc-row">Dividende/J. <span class="pos">${fmtEur(h.totalDividendRate, 0)}</span></div>
+        <div class="uc-row">Yield <span>${fmtPct(h.dividendYield)}</span></div>
+      </div>`).join('');
+  }
+}
+
+// ── Render Wachstum Tab ───────────────────────────────────────────────
+function renderWachstum(held) {
+  // Top 20 CAGR bar
+  const withCagr = held.filter(h => h.dividendCagr !== 0 && h.totalDividendRate > 0)
+    .sort((a,b) => b.dividendCagr - a.dividendCagr).slice(0, 20);
+
+  barChart('chart-cagr',
+    withCagr.map(h => h.symbol),
+    [{
+      label: 'CAGR (5J)',
+      data: withCagr.map(h => +(h.dividendCagr * 100).toFixed(1)),
+      backgroundColor: withCagr.map(h => h.dividendCagr >= 0 ? 'rgba(63,185,80,.75)' : 'rgba(248,81,73,.75)'),
+      borderRadius: 4
+    }],
+    {
+      legend: false,
+      tooltipCb: { label: ctx => ` CAGR: ${ctx.raw.toFixed(1)} %` }
+    }
+  );
+
+  // CAGR distribution histogram
+  const buckets = { '<0%': 0, '0-5%': 0, '5-10%': 0, '10-15%': 0, '>15%': 0 };
+  held.filter(h => h.dividendCagr !== 0 && h.totalDividendRate > 0).forEach(h => {
+    const c = h.dividendCagr * 100;
+    if (c < 0) buckets['<0%']++;
+    else if (c < 5) buckets['0-5%']++;
+    else if (c < 10) buckets['5-10%']++;
+    else if (c < 15) buckets['10-15%']++;
+    else buckets['>15%']++;
+  });
+  barChart('chart-cagr-dist',
+    Object.keys(buckets),
+    [{ label: 'Positionen', data: Object.values(buckets), backgroundColor: PALETTE, borderRadius: 4 }],
+    { legend: false, tooltipCb: { label: ctx => ` ${ctx.raw} Positionen` } }
+  );
+
+  // Yield vs YoC comparison (top 15 by dividend)
+  const yocData = held.filter(h => h.totalDividendRate > 0 && h.dividendYieldOnBuyin > 0)
+    .sort((a,b) => b.dividendYieldOnBuyin - a.dividendYieldOnBuyin).slice(0, 15);
+  barChart('chart-yoc',
+    yocData.map(h => h.symbol),
+    [
+      { label: 'Yield (aktuell)',    data: yocData.map(h => +(h.dividendYield * 100).toFixed(2)), backgroundColor: 'rgba(88,166,255,.7)', borderRadius: 4 },
+      { label: 'Yield-on-Cost', data: yocData.map(h => +(h.dividendYieldOnBuyin * 100).toFixed(2)), backgroundColor: 'rgba(188,140,255,.7)', borderRadius: 4 }
+    ],
+    { tooltipCb: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw.toFixed(2)} %` } }
+  );
+
+  // Projection table
+  const totalGross = held.reduce((s, h) => s + h.totalDividendRate, 0);
+  const avgCagr    = held.filter(h => h.dividendCagr > 0 && h.totalDividendRate > 0)
+    .reduce((s, h) => s + h.dividendCagr * h.totalDividendRate, 0)
+    / (held.filter(h => h.dividendCagr > 0 && h.totalDividendRate > 0).reduce((s, h) => s + h.totalDividendRate, 0) || 1);
+
+  const tbody = document.getElementById('projection-body');
+  tbody.innerHTML = '';
+  for (let y = 0; y <= 10; y++) {
+    const g = totalGross * Math.pow(1 + avgCagr, y);
+    const n = g * (1 - TAX);
+    const pct = Math.min(n / GOAL * 100, 999);
+    const growth = y === 0 ? '–' : '+' + ((Math.pow(1 + avgCagr, y) - 1) * 100).toFixed(0) + '%';
+    const barW = Math.min(pct, 100).toFixed(0);
+    tbody.innerHTML += `<tr>
+      <td><strong>${y === 0 ? 'Heute' : 'Jahr ' + y}</strong></td>
+      <td>${fmtEur(g, 0)}</td>
+      <td class="${n >= GOAL ? 'pos' : ''}">${fmtEur(n, 0)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="bar-track" style="flex:1;max-width:120px"><div class="bar-fill ${n>=GOAL?'bar-green':'bar-blue'}" style="width:${barW}%"></div></div>
+          <span style="font-size:11px;color:var(--txt2)">${Math.min(pct,999).toFixed(0)}%</span>
+        </div>
+      </td>
+      <td style="color:var(--txt2)">${growth}</td>
+    </tr>`;
+  }
+}
+
+// ── Positions Table ───────────────────────────────────────────────────
+let posData = [];
+let sortCol = 'value', sortDir = -1;
+
+function renderPositions(all) {
+  posData = all;
+  applyFilter();
+}
+
+function applyFilter() {
+  const q       = document.getElementById('pos-search').value.toLowerCase();
+  const typeF   = document.getElementById('pos-filter-type').value;
+  const heldF   = document.getElementById('pos-filter-held').value;
+
+  let data = posData.filter(h => {
+    if (heldF === 'held' && h.quantity <= 0) return false;
+    if (typeF && h.securityType !== typeF) return false;
+    if (q && !h.name.toLowerCase().includes(q) && !h.symbol.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  data.sort((a, b) => {
+    let av = a[sortCol], bv = b[sortCol];
+    if (typeof av === 'string') return sortDir * av.localeCompare(bv);
+    return sortDir * (av - bv);
+  });
+
+  const typeBadge = { EQUITY: 'badge-equity', ETF: 'badge-etf', CRYPTO: 'badge-crypto', FUND: 'badge-fund' };
+  const freqShort = { monthly: 'mtl.', quarterly: 'qrt.', annually: 'jähr.', biannually: 'halb.', none: '–' };
+
+  document.getElementById('pos-tbody').innerHTML = data.map(h => {
+    const gCls = h.gain >= 0 ? 'pos' : 'neg';
+    const badge = typeBadge[h.securityType] || 'badge-fund';
+    return `<tr>
+      <td class="td-name">
+        <strong>${h.name}</strong>
+        <span>${h.symbol} &middot; <span class="badge ${badge}">${h.securityType}</span></span>
+      </td>
+      <td>${h.value > 0 ? fmtEur(h.value, 0) : '–'}</td>
+      <td>${h.buyinTotal > 0 ? fmtEur(h.buyinTotal, 0) : '–'}</td>
+      <td class="${gCls}">${h.gain !== 0 ? (h.gain >= 0 ? '+' : '') + fmtEur(h.gain, 0) : '–'}</td>
+      <td class="${gCls}">${h.gainRel !== 0 ? (h.gainRel >= 0 ? '+' : '') + fmtPct(h.gainRel) : '–'}</td>
+      <td class="pos">${h.totalDividendRate > 0 ? fmtEur(h.totalDividendRate, 0) : '–'}</td>
+      <td>${h.dividendYield > 0 ? fmtPct(h.dividendYield) : '–'}</td>
+      <td>${h.dividendYieldOnBuyin > 0 ? fmtPct(h.dividendYieldOnBuyin) : '–'}</td>
+      <td>${h.dividendCagr !== 0 ? (h.dividendCagr >= 0 ? '+' : '') + (h.dividendCagr * 100).toFixed(1) + '%' : '–'}</td>
+      <td>${freqShort[h.dividendFrequency] || '–'}</td>
+      <td style="color:var(--txt2)">${h.sector || '–'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function setupTableSort() {
+  document.querySelectorAll('#pos-table thead th[data-col]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (sortCol === col) sortDir *= -1; else { sortCol = col; sortDir = -1; }
+      document.querySelectorAll('#pos-table thead th').forEach(t => t.classList.remove('sort-asc','sort-desc'));
+      th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+      applyFilter();
+    });
+  });
+  document.getElementById('pos-search').addEventListener('input', applyFilter);
+  document.getElementById('pos-filter-type').addEventListener('change', applyFilter);
+  document.getElementById('pos-filter-held').addEventListener('change', applyFilter);
+}
+
+// ── Main render ───────────────────────────────────────────────────────
+function renderAll(rows, filename) {
+  const held = rows.filter(h => h.quantity > 0);
+  const { grossDiv, netDiv } = renderKPIs(held);
+  renderGoal(grossDiv, netDiv);
+  renderUebersicht(held);
+  renderDividenden(held);
+  renderWachstum(held);
+  renderPositions(rows);
+
+  const now = filename
+    ? `${filename} · geladen am ${new Date().toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}`
+    : '';
+  document.getElementById('last-updated').textContent = now;
+
+  document.getElementById('upload-screen').style.display = 'none';
+  document.getElementById('dashboard').style.display     = 'block';
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── File handling ─────────────────────────────────────────────────────
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target.result;
+    try {
+      localStorage.setItem(STORAGE_KEY, text);
+      localStorage.setItem(STORAGE_KEY + '_name', file.name);
+    } catch(_) {}
+    renderAll(parseCSV(text), file.name);
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+// Drop zone
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('click', () => document.getElementById('file-input').click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  handleFile(e.dataTransfer.files[0]);
+});
+document.getElementById('file-input').addEventListener('change', e => handleFile(e.target.files[0]));
+
+// Header button
+document.getElementById('upload-new').addEventListener('click', () => document.getElementById('file-input-2').click());
+document.getElementById('file-input-2').addEventListener('change', e => handleFile(e.target.files[0]));
+
+// Table sort setup
+setupTableSort();
+
+// ── Auto-load from localStorage ───────────────────────────────────────
+try {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  const name  = localStorage.getItem(STORAGE_KEY + '_name') || 'gespeichert';
+  if (saved) renderAll(parseCSV(saved), name);
+} catch(_) {}
+</script>
+</body>
+</html>
