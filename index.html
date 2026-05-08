@@ -442,6 +442,55 @@
     .fire-label { font-size: 11px; color: var(--txt2); margin-bottom: 4px; }
     .fire-val   { font-size: 1.1rem; font-weight: 700; }
 
+    /* ── Simulation ─────────────────────────────────────────────────── */
+    .sim-controls {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 24px;
+      align-items: end;
+    }
+    .sim-control-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+    .sim-ctrl-label { font-size: 11px; color: var(--txt2); text-transform: uppercase; letter-spacing: .5px; }
+    .sim-val { font-size: 1rem; font-weight: 700; color: var(--blue); }
+    input[type="range"] { width: 100%; accent-color: var(--blue); cursor: pointer; height: 4px; }
+    .range-limits { display: flex; justify-content: space-between; font-size: 10px; color: var(--txt2); margin-top: 5px; }
+    .sim-toggle-row { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .toggle-track {
+      width: 42px; height: 24px; flex-shrink: 0;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 12px; position: relative; transition: background .2s, border-color .2s;
+    }
+    .toggle-track.on { background: var(--green-dim); border-color: var(--green); }
+    .toggle-thumb {
+      position: absolute; top: 3px; left: 3px;
+      width: 16px; height: 16px; background: var(--txt2);
+      border-radius: 50%; transition: transform .2s, background .2s;
+    }
+    .toggle-track.on .toggle-thumb { transform: translateX(18px); background: var(--green); }
+    .sim-results {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+      gap: 12px; margin-bottom: 20px;
+    }
+    .sim-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px 20px;
+    }
+    .sim-card-label { font-size: 10px; color: var(--txt2); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+    .sim-card-val   { font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; }
+    .sim-card-sub   { font-size: 11px; color: var(--txt2); }
+    .sim-table { width: 100%; font-size: 12.5px; }
+    .sim-table th { background: var(--bg3); padding: 9px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: var(--txt2); font-weight: 600; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+    .sim-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .sim-table tr:last-child td { border-bottom: none; }
+    .sim-table tr.sim-goal-row  td { background: rgba(63,185,80,.07); }
+    .sim-table tr.base-goal-row td { background: rgba(88,166,255,.05); }
+
     /* ── Kalender ────────────────────────────────────────────────────── */
     .cal-summary {
       display: grid;
@@ -603,12 +652,13 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="uebersicht">Übersicht</button>
       <button class="tab-btn" data-tab="dividenden">Dividenden</button>
-      <button class="tab-btn" data-tab="wachstum">Wachstum</button>
-      <button class="tab-btn" data-tab="meilensteine">Meilensteine</button>
-      <button class="tab-btn" data-tab="freiheit">Freiheit</button>
       <button class="tab-btn" data-tab="kalender">Kalender</button>
       <button class="tab-btn" data-tab="analyse">Analyse</button>
+      <button class="tab-btn" data-tab="wachstum">Wachstum</button>
       <button class="tab-btn" data-tab="positionen">Positionen</button>
+      <button class="tab-btn" data-tab="meilensteine">Meilensteine</button>
+      <button class="tab-btn" data-tab="simulation">Simulation</button>
+      <button class="tab-btn" data-tab="freiheit">Freiheit</button>
     </div>
 
     <!-- Tab: Übersicht -->
@@ -657,6 +707,10 @@
           <canvas id="chart-div-type"></canvas>
         </div>
       </div>
+      <div class="chart-card wide">
+        <h3>Monatliches Einkommen nach Sektor (gestapelt)</h3>
+        <canvas id="chart-monthly-sector" style="max-height:320px"></canvas>
+      </div>
     </div>
 
     <!-- Tab: Wachstum -->
@@ -702,6 +756,72 @@
       <div class="chart-card">
         <h3>Meilensteinpfad – Netto-Dividenden vs. Zielwerte</h3>
         <canvas id="chart-milestone-path" style="max-height:280px"></canvas>
+      </div>
+    </div>
+
+    <!-- Tab: Simulation -->
+    <div class="tab-panel" id="tab-simulation">
+
+      <!-- Controls -->
+      <div class="sim-controls">
+        <div>
+          <div class="sim-control-header">
+            <span class="sim-ctrl-label">Monatliche Zusatzinvestition</span>
+            <span class="sim-val" id="sim-monthly-val">500 €</span>
+          </div>
+          <input type="range" id="sim-monthly" min="0" max="2000" step="50" value="500">
+          <div class="range-limits"><span>0 €</span><span>2.000 €</span></div>
+        </div>
+        <div>
+          <div class="sim-control-header">
+            <span class="sim-ctrl-label">Dividendenrendite (Neuinvest.)</span>
+            <span class="sim-val" id="sim-yield-val">4,0 %</span>
+          </div>
+          <input type="range" id="sim-yield" min="10" max="80" step="5" value="40">
+          <div class="range-limits"><span>1 %</span><span>8 %</span></div>
+        </div>
+        <div>
+          <div class="sim-control-header">
+            <span class="sim-ctrl-label">Div.-CAGR Neuinvest.</span>
+            <span class="sim-val" id="sim-cagr-val">5,0 %</span>
+          </div>
+          <input type="range" id="sim-cagr" min="0" max="150" step="5" value="50">
+          <div class="range-limits"><span>0 %</span><span>15 %</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;justify-content:flex-end;gap:10px">
+          <span class="sim-ctrl-label">Netto-Dividenden reinvestieren</span>
+          <label class="sim-toggle-row" id="sim-reinvest-toggle" style="margin-bottom:2px">
+            <div class="toggle-track" id="sim-reinvest-track"><div class="toggle-thumb"></div></div>
+            <span id="sim-reinvest-label" style="font-size:13px;font-weight:500">Aus</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Result KPIs -->
+      <div class="sim-results" id="sim-results"></div>
+
+      <!-- Chart -->
+      <div class="chart-card" style="margin-bottom:16px">
+        <h3>Netto-Dividenden Projektion – 20 Jahre</h3>
+        <canvas id="chart-simulation" style="max-height:380px"></canvas>
+      </div>
+
+      <!-- Year table -->
+      <div class="chart-card">
+        <h3>Jahresweise Übersicht</h3>
+        <div style="overflow-x:auto">
+          <table class="sim-table">
+            <thead><tr>
+              <th>Jahr</th>
+              <th>Netto Basis</th>
+              <th>Netto Simulation</th>
+              <th>Differenz</th>
+              <th>Kum. investiert</th>
+              <th>Ziel (42k)</th>
+            </tr></thead>
+            <tbody id="sim-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -899,6 +1019,25 @@ function groupBy(holdings, key, valueKey) {
     map[k] = (map[k] || 0) + h[valueKey];
   });
   return map;
+}
+
+// ── Monthly income split by sector ───────────────────────────────────
+function monthlyBySector(holdings) {
+  const sectors = {};
+  holdings.forEach(h => {
+    if (h.quantity <= 0 || h.totalDividendRate <= 0) return;
+    const s = h.sector || h.securityType || 'Sonstige';
+    if (!sectors[s]) sectors[s] = new Array(12).fill(0);
+    const freq = h.dividendFrequency, ann = h.totalDividendRate;
+    const pm   = h.payDate ? new Date(h.payDate).getMonth() : 0;
+    switch (freq) {
+      case 'monthly':    for (let i=0;i<12;i++) sectors[s][i] += ann/12; break;
+      case 'quarterly':  for (let i=0;i<4;i++) sectors[s][(pm+i*3)%12] += ann/4; break;
+      case 'biannually': sectors[s][pm%12] += ann/2; sectors[s][(pm+6)%12] += ann/2; break;
+      case 'annually':   sectors[s][pm%12] += ann; break;
+    }
+  });
+  return sectors;
 }
 
 // ── Detailed monthly breakdown (gross + top payers per month) ────────
@@ -1163,6 +1302,21 @@ function renderDividenden(held) {
   const typeDiv = groupBy(held.filter(h => h.totalDividendRate > 0), 'securityType', 'totalDividendRate');
   const tdKeys = Object.keys(typeDiv).sort((a,b) => typeDiv[b] - typeDiv[a]);
   doughnutChart('chart-div-type', tdKeys, tdKeys.map(k => typeDiv[k]));
+
+  // Monthly stacked by sector
+  const bySector  = monthlyBySector(held);
+  const secKeys   = Object.keys(bySector).sort((a,b) =>
+    bySector[b].reduce((s,v)=>s+v,0) - bySector[a].reduce((s,v)=>s+v,0));
+  barChart('chart-monthly-sector', MONTHS_DE,
+    secKeys.map((s, i) => ({
+      label: s,
+      data:  bySector[s].map(v => Math.round(v)),
+      backgroundColor: PALETTE[i % PALETTE.length],
+      borderRadius: 2,
+    })),
+    { stacked: true,
+      tooltipCb: { label: ctx => ` ${ctx.dataset.label}: ${fmtEur(ctx.raw, 0)}` } }
+  );
 }
 
 // ── Render Wachstum Tab ───────────────────────────────────────────────
@@ -1265,6 +1419,164 @@ function renderWachstum(held) {
       <td style="color:var(--txt2)">${growth}</td>
     </tr>`;
   }
+}
+
+// ── Simulation engine ────────────────────────────────────────────────
+function simulate(grossDiv, avgCagr, monthly, newYield, newCagr, reinvest, years) {
+  const base = [], sim = [];
+  let addlDiv = 0, addlCap = 0;
+
+  for (let y = 0; y <= years; y++) {
+    const existDiv = grossDiv * Math.pow(1 + avgCagr, y);
+
+    base.push({ net: existDiv * (1 - TAX) });
+
+    const simGross = existDiv + addlDiv;
+    const simNet   = simGross * (1 - TAX);
+    sim.push({ net: simNet, addlCap });
+
+    // Grow existing extra dividends
+    addlDiv = addlDiv * (1 + newCagr);
+    // This year's new capital: monthly + optional reinvestment
+    const thisYearCap = monthly * 12 + (reinvest ? simNet : 0);
+    addlDiv  += thisYearCap * newYield;
+    addlCap  += thisYearCap;
+  }
+  return { base, sim };
+}
+
+// ── Render / Update Simulation Tab ───────────────────────────────────
+let _simHeld = [], _simReinvest = false;
+
+function renderSimulation(held) {
+  _simHeld = held;
+  runSimulation();
+}
+
+function runSimulation() {
+  if (!_simHeld.length) return;
+  const held     = _simHeld;
+  const monthly  = +document.getElementById('sim-monthly').value;
+  const yieldR   = +document.getElementById('sim-yield').value / 1000;  // 40 → 0.04
+  const cagrR    = +document.getElementById('sim-cagr').value  / 1000;  // 50 → 0.05
+  const reinvest = _simReinvest;
+  const YEARS    = 20;
+
+  const grossDiv = held.reduce((s,h) => s + h.totalDividendRate, 0);
+  const avgCagr  = weightedAvgCagr(held);
+  const { base, sim } = simulate(grossDiv, avgCagr, monthly, yieldR, cagrR, reinvest, YEARS);
+
+  const baseGoalYr = base.findIndex(r => r.net >= GOAL);
+  const simGoalYr  = sim.findIndex(r => r.net >= GOAL);
+  const yearsSaved = (baseGoalYr > 0 && simGoalYr > 0) ? baseGoalYr - simGoalYr : null;
+  const totalInv   = sim[YEARS].addlCap;
+  const multiplier = base[YEARS].net > 0 ? sim[YEARS].net / base[YEARS].net : 0;
+
+  // KPI cards
+  document.getElementById('sim-results').innerHTML = `
+    <div class="sim-card">
+      <div class="sim-card-label">Ziel ohne Zusatz</div>
+      <div class="sim-card-val ${baseGoalYr > 0 ? 'neu' : 'neg'}">${baseGoalYr > 0 ? 'Jahr ' + baseGoalYr : '> 20 J.'}</div>
+      <div class="sim-card-sub">bei Ø ${(avgCagr*100).toFixed(1)} % CAGR</div>
+    </div>
+    <div class="sim-card">
+      <div class="sim-card-label">Ziel mit Simulation</div>
+      <div class="sim-card-val ${simGoalYr > 0 ? 'pos' : 'neg'}">${simGoalYr > 0 ? 'Jahr ' + simGoalYr : '> 20 J.'}</div>
+      <div class="sim-card-sub">${monthly > 0 ? fmtEur(monthly,0)+'/Mo.' : ''}${monthly > 0 && reinvest ? ' + ' : ''}${reinvest ? 'Reinvest.' : monthly === 0 ? 'Keine Änderung' : ''}</div>
+    </div>
+    <div class="sim-card">
+      <div class="sim-card-label">Jahre gespart</div>
+      <div class="sim-card-val ${yearsSaved > 0 ? 'pos' : ''}">${yearsSaved !== null && yearsSaved > 0 ? '− ' + yearsSaved + ' J.' : yearsSaved === 0 ? '± 0' : '–'}</div>
+      <div class="sim-card-sub">gegenüber Basisszenario</div>
+    </div>
+    <div class="sim-card">
+      <div class="sim-card-label">Kum. Zusatzkapital (20 J.)</div>
+      <div class="sim-card-val">${fmtEur(totalInv, 0)}</div>
+      <div class="sim-card-sub">inkl. reinvestierter Dividenden</div>
+    </div>
+    <div class="sim-card">
+      <div class="sim-card-label">Netto-Dividenden in Jahr 20</div>
+      <div class="sim-card-val pos">${fmtEur(sim[YEARS].net, 0)}</div>
+      <div class="sim-card-sub">Basis: ${fmtEur(base[YEARS].net, 0)}</div>
+    </div>
+    <div class="sim-card">
+      <div class="sim-card-label">Einkommensmultiplikator J.20</div>
+      <div class="sim-card-val ${multiplier > 1 ? 'pos' : ''}">× ${multiplier.toFixed(2)}</div>
+      <div class="sim-card-sub">Sim. ÷ Basis in Jahr 20</div>
+    </div>`;
+
+  // Line chart
+  const labels = Array.from({length: YEARS+1}, (_,i) => i === 0 ? 'Heute' : 'J+'+i);
+  destroyChart('chart-simulation');
+  new Chart(document.getElementById('chart-simulation').getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets: [
+      { label: 'Simulation (Netto)',
+        data: sim.map(r => Math.round(r.net)),
+        borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,.08)',
+        fill: true, tension: .35, pointRadius: 3, pointHoverRadius: 6 },
+      { label: 'Basis (Netto)',
+        data: base.map(r => Math.round(r.net)),
+        borderColor: '#58a6ff', backgroundColor: 'transparent',
+        tension: .35, pointRadius: 3, borderDash: [5,3] },
+      { label: 'Ziel 42.000 €',
+        data: Array(YEARS+1).fill(GOAL),
+        borderColor: 'rgba(240,136,62,.75)', borderDash: [7,4],
+        pointRadius: 0, borderWidth: 2 }
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: {
+        legend: { labels: { color: '#8b949e', font: {size:11} } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmtEur(ctx.raw, 0)}` } }
+      },
+      scales: {
+        x: { grid:{color:'#21262d'}, ticks:{color:'#8b949e', font:{size:11}} },
+        y: { grid:{color:'#21262d'}, ticks:{color:'#8b949e', font:{size:11}, callback: v => fmtEur(v,0)} }
+      }
+    }
+  });
+
+  // Year table
+  let tbody = '';
+  for (let y = 0; y <= YEARS; y++) {
+    const b = base[y], s = sim[y];
+    const diff    = s.net - b.net;
+    const rowCls  = y === simGoalYr ? 'sim-goal-row' : y === baseGoalYr ? 'base-goal-row' : '';
+    const goalTd  = y === simGoalYr  ? '<span class="risk-tag risk-low">✓ Sim.</span>' :
+                    y === baseGoalYr ? '<span class="risk-tag" style="background:rgba(88,166,255,.15);color:var(--blue);border:1px solid rgba(88,166,255,.3)">✓ Basis</span>' :
+                    s.net >= GOAL    ? '<span style="color:var(--green);font-size:11px">✓</span>' : '–';
+    tbody += `<tr class="${rowCls}">
+      <td><strong>${y === 0 ? 'Heute' : 'Jahr ' + y}</strong></td>
+      <td>${fmtEur(b.net, 0)}</td>
+      <td class="${s.net >= GOAL ? 'pos' : ''}">${fmtEur(s.net, 0)}</td>
+      <td class="${diff > 1 ? 'pos' : ''}">${diff > 1 ? '+' : ''}${fmtEur(diff, 0)}</td>
+      <td style="color:var(--txt2)">${fmtEur(s.addlCap, 0)}</td>
+      <td>${goalTd}</td>
+    </tr>`;
+  }
+  document.getElementById('sim-tbody').innerHTML = tbody;
+}
+
+function setupSimulation() {
+  document.getElementById('sim-monthly').addEventListener('input', e => {
+    document.getElementById('sim-monthly-val').textContent = fmtEur(+e.target.value, 0);
+    runSimulation();
+  });
+  document.getElementById('sim-yield').addEventListener('input', e => {
+    document.getElementById('sim-yield-val').textContent = (+e.target.value / 10).toFixed(1).replace('.', ',') + ' %';
+    runSimulation();
+  });
+  document.getElementById('sim-cagr').addEventListener('input', e => {
+    document.getElementById('sim-cagr-val').textContent = (+e.target.value / 10).toFixed(1).replace('.', ',') + ' %';
+    runSimulation();
+  });
+  document.getElementById('sim-reinvest-toggle').addEventListener('click', () => {
+    _simReinvest = !_simReinvest;
+    document.getElementById('sim-reinvest-track').classList.toggle('on', _simReinvest);
+    document.getElementById('sim-reinvest-label').textContent = _simReinvest ? 'An' : 'Aus';
+    runSimulation();
+  });
 }
 
 // ── Render Freiheit Tab ───────────────────────────────────────────────
@@ -1657,6 +1969,7 @@ function renderAll(rows, filename) {
   renderDividenden(held);
   renderWachstum(held);
   renderMeilensteine(held);
+  renderSimulation(held);
   renderFreiheit(held);
   renderKalender(held);
   renderAnalyse(held);
@@ -1713,6 +2026,7 @@ document.getElementById('file-input-2').addEventListener('change', e => handleFi
 
 // Table sort setup
 setupTableSort();
+setupSimulation();
 
 // ── Auto-load from localStorage ───────────────────────────────────────
 try {
