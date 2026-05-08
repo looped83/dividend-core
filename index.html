@@ -657,8 +657,8 @@
       <button class="tab-btn" data-tab="wachstum">Wachstum</button>
       <button class="tab-btn" data-tab="positionen">Positionen</button>
       <button class="tab-btn" data-tab="meilensteine">Meilensteine</button>
-      <button class="tab-btn" data-tab="simulation">Simulation</button>
       <button class="tab-btn" data-tab="freiheit">Freiheit</button>
+      <button class="tab-btn" data-tab="simulation">Simulation</button>
     </div>
 
     <!-- Tab: Übersicht -->
@@ -705,6 +705,10 @@
         <div class="chart-card">
           <h3>Dividenden nach Asset-Klasse</h3>
           <canvas id="chart-div-type"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Dividenden nach Herkunftsland</h3>
+          <canvas id="chart-div-country"></canvas>
         </div>
       </div>
       <div class="chart-card wide">
@@ -769,15 +773,15 @@
             <span class="sim-ctrl-label">Monatliche Zusatzinvestition</span>
             <span class="sim-val" id="sim-monthly-val">500 €</span>
           </div>
-          <input type="range" id="sim-monthly" min="0" max="2000" step="50" value="500">
-          <div class="range-limits"><span>0 €</span><span>2.000 €</span></div>
+          <input type="range" id="sim-monthly" min="0" max="5000" step="100" value="500">
+          <div class="range-limits"><span>0 €</span><span>5.000 €</span></div>
         </div>
         <div>
           <div class="sim-control-header">
             <span class="sim-ctrl-label">Dividendenrendite (Neuinvest.)</span>
             <span class="sim-val" id="sim-yield-val">4,0 %</span>
           </div>
-          <input type="range" id="sim-yield" min="10" max="80" step="5" value="40">
+          <input type="range" id="sim-yield" min="10" max="80" step="1" value="40">
           <div class="range-limits"><span>1 %</span><span>8 %</span></div>
         </div>
         <div>
@@ -785,7 +789,7 @@
             <span class="sim-ctrl-label">Div.-CAGR Neuinvest.</span>
             <span class="sim-val" id="sim-cagr-val">5,0 %</span>
           </div>
-          <input type="range" id="sim-cagr" min="0" max="150" step="5" value="50">
+          <input type="range" id="sim-cagr" min="0" max="150" step="1" value="50">
           <div class="range-limits"><span>0 %</span><span>15 %</span></div>
         </div>
         <div style="display:flex;flex-direction:column;justify-content:flex-end;gap:10px">
@@ -1303,6 +1307,11 @@ function renderDividenden(held) {
   const tdKeys = Object.keys(typeDiv).sort((a,b) => typeDiv[b] - typeDiv[a]);
   doughnutChart('chart-div-type', tdKeys, tdKeys.map(k => typeDiv[k]));
 
+  // Dividends by country
+  const countryDiv = groupBy(held.filter(h => h.totalDividendRate > 0), 'country', 'totalDividendRate');
+  const cdKeys = Object.keys(countryDiv).sort((a,b) => countryDiv[b] - countryDiv[a]);
+  doughnutChart('chart-div-country', cdKeys, cdKeys.map(k => countryDiv[k]));
+
   // Monthly stacked by sector
   const bySector  = monthlyBySector(held);
   const secKeys   = Object.keys(bySector).sort((a,b) =>
@@ -1370,7 +1379,8 @@ function renderWachstum(held) {
   // Income path line chart (years 0–12)
   const totalGrossW = held.reduce((s,h) => s + h.totalDividendRate, 0);
   const avgCagrW    = weightedAvgCagr(held);
-  const yearLabels  = Array.from({length:13}, (_,i) => i === 0 ? 'Heute' : 'J+'+i);
+  const _cy = new Date().getFullYear();
+  const yearLabels  = Array.from({length:13}, (_,i) => String(_cy + i));
   const netPath     = yearLabels.map((_,i) => Math.round(totalGrossW * Math.pow(1+avgCagrW,i) * (1-TAX)));
   const grossPath   = yearLabels.map((_,i) => Math.round(totalGrossW * Math.pow(1+avgCagrW,i)));
   destroyChart('chart-income-path');
@@ -1407,7 +1417,7 @@ function renderWachstum(held) {
     const growth = y === 0 ? '–' : '+' + ((Math.pow(1 + avgCagr, y) - 1) * 100).toFixed(0) + '%';
     const barW = Math.min(pct, 100).toFixed(0);
     tbody.innerHTML += `<tr>
-      <td><strong>${y === 0 ? 'Heute' : 'Jahr ' + y}</strong></td>
+      <td><strong>${new Date().getFullYear() + y}</strong></td>
       <td>${fmtEur(g, 0)}</td>
       <td class="${n >= GOAL ? 'pos' : ''}">${fmtEur(n, 0)}</td>
       <td>
@@ -1506,7 +1516,8 @@ function runSimulation() {
     </div>`;
 
   // Line chart
-  const labels = Array.from({length: YEARS+1}, (_,i) => i === 0 ? 'Heute' : 'J+'+i);
+  const _simCY = new Date().getFullYear();
+  const labels = Array.from({length: YEARS+1}, (_,i) => String(_simCY + i));
   destroyChart('chart-simulation');
   new Chart(document.getElementById('chart-simulation').getContext('2d'), {
     type: 'line',
@@ -1547,7 +1558,7 @@ function runSimulation() {
                     y === baseGoalYr ? '<span class="risk-tag" style="background:rgba(88,166,255,.15);color:var(--blue);border:1px solid rgba(88,166,255,.3)">✓ Basis</span>' :
                     s.net >= GOAL    ? '<span style="color:var(--green);font-size:11px">✓</span>' : '–';
     tbody += `<tr class="${rowCls}">
-      <td><strong>${y === 0 ? 'Heute' : 'Jahr ' + y}</strong></td>
+      <td><strong>${_simCY + y}</strong></td>
       <td>${fmtEur(b.net, 0)}</td>
       <td class="${s.net >= GOAL ? 'pos' : ''}">${fmtEur(s.net, 0)}</td>
       <td class="${diff > 1 ? 'pos' : ''}">${diff > 1 ? '+' : ''}${fmtEur(diff, 0)}</td>
