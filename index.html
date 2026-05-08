@@ -269,24 +269,6 @@
     .badge-crypto  { background: rgba(240,136,62,.15); color: var(--orange); }
     .badge-fund    { background: rgba(63,185,80,.15); color: var(--green); }
 
-    /* ── Upcoming Dividends ──────────────────────────────────────────── */
-    .upcoming-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 10px;
-      margin-top: 8px;
-    }
-    .upcoming-card {
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 16px;
-    }
-    .upcoming-card .uc-name { font-weight: 600; font-size: 13px; }
-    .upcoming-card .uc-sym  { color: var(--txt2); font-size: 11px; margin-bottom: 8px; }
-    .upcoming-card .uc-row  { display: flex; justify-content: space-between; font-size: 11px; color: var(--txt2); margin-top: 3px; }
-    .upcoming-card .uc-row span { color: var(--txt); font-weight: 500; }
-
     /* ── Top holdings list ───────────────────────────────────────────── */
     .top-list { display: flex; flex-direction: column; gap: 6px; }
     .top-item {
@@ -307,14 +289,6 @@
     .projection-table th { text-align: left; padding: 8px 12px; color: var(--txt2); font-weight: 600; font-size: 11px; border-bottom: 1px solid var(--border); }
     .projection-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
     .projection-table tr:last-child td { border-bottom: none; }
-
-    /* ── Tooltip ─────────────────────────────────────────────────────── */
-    .tooltip-label { white-space: nowrap; }
-
-    /* ── Utility ─────────────────────────────────────────────────────── */
-    .flex { display: flex; gap: 12px; align-items: center; }
-    .mt16 { margin-top: 16px; }
-    .hidden { display: none !important; }
 
     /* ── Goal Micro ──────────────────────────────────────────────────── */
     .goal-micro {
@@ -988,30 +962,23 @@ function parseCSV(text) {
   }).filter(r => r.name);
 }
 
+// ── Payment month helper ─────────────────────────────────────────────
+function forEachPaymentMonth(h, cb) {
+  if (h.quantity <= 0 || h.totalDividendRate <= 0) return;
+  const ann = h.totalDividendRate;
+  const pm  = h.payDate ? new Date(h.payDate).getMonth() : 0;
+  switch (h.dividendFrequency) {
+    case 'monthly':    for (let i=0;i<12;i++) cb(i, ann/12); break;
+    case 'quarterly':  for (let i=0;i<4;i++) cb((pm+i*3)%12, ann/4); break;
+    case 'biannually': cb(pm%12, ann/2); cb((pm+6)%12, ann/2); break;
+    case 'annually':   cb(pm%12, ann); break;
+  }
+}
+
 // ── Monthly income projection ─────────────────────────────────────────
 function monthlyIncome(holdings) {
   const months = new Array(12).fill(0);
-  holdings.forEach(h => {
-    if (h.quantity <= 0 || h.totalDividendRate <= 0) return;
-    const freq  = h.dividendFrequency;
-    const ann   = h.totalDividendRate;
-    const pm    = h.payDate ? new Date(h.payDate).getMonth() : 0;
-    switch (freq) {
-      case 'monthly':
-        for (let i = 0; i < 12; i++) months[i] += ann / 12;
-        break;
-      case 'quarterly':
-        for (let i = 0; i < 4; i++) months[(pm + i * 3) % 12] += ann / 4;
-        break;
-      case 'biannually':
-        months[pm % 12]       += ann / 2;
-        months[(pm + 6) % 12] += ann / 2;
-        break;
-      case 'annually':
-        months[pm % 12] += ann;
-        break;
-    }
-  });
+  holdings.forEach(h => forEachPaymentMonth(h, (m, amt) => { months[m] += amt; }));
   return months;
 }
 
@@ -1029,17 +996,11 @@ function groupBy(holdings, key, valueKey) {
 function monthlyBySector(holdings) {
   const sectors = {};
   holdings.forEach(h => {
-    if (h.quantity <= 0 || h.totalDividendRate <= 0) return;
     const s = h.sector || h.securityType || 'Sonstige';
-    if (!sectors[s]) sectors[s] = new Array(12).fill(0);
-    const freq = h.dividendFrequency, ann = h.totalDividendRate;
-    const pm   = h.payDate ? new Date(h.payDate).getMonth() : 0;
-    switch (freq) {
-      case 'monthly':    for (let i=0;i<12;i++) sectors[s][i] += ann/12; break;
-      case 'quarterly':  for (let i=0;i<4;i++) sectors[s][(pm+i*3)%12] += ann/4; break;
-      case 'biannually': sectors[s][pm%12] += ann/2; sectors[s][(pm+6)%12] += ann/2; break;
-      case 'annually':   sectors[s][pm%12] += ann; break;
-    }
+    forEachPaymentMonth(h, (m, amt) => {
+      if (!sectors[s]) sectors[s] = new Array(12).fill(0);
+      sectors[s][m] += amt;
+    });
   });
   return sectors;
 }
@@ -1047,18 +1008,12 @@ function monthlyBySector(holdings) {
 // ── Detailed monthly breakdown (gross + top payers per month) ────────
 function monthlyBreakdown(holdings) {
   const months = Array.from({length:12}, () => ({ gross: 0, payers: [] }));
-  holdings.forEach(h => {
-    if (h.quantity <= 0 || h.totalDividendRate <= 0) return;
-    const freq = h.dividendFrequency, ann = h.totalDividendRate;
-    const pm = h.payDate ? new Date(h.payDate).getMonth() : 0;
-    const add = (m, amt) => { months[m].gross += amt; months[m].payers.push({ symbol: h.symbol, amount: amt }); };
-    switch (freq) {
-      case 'monthly':     for (let i=0;i<12;i++) add(i, ann/12); break;
-      case 'quarterly':   for (let i=0;i<4;i++) add((pm+i*3)%12, ann/4); break;
-      case 'biannually':  add(pm%12, ann/2); add((pm+6)%12, ann/2); break;
-      case 'annually':    add(pm%12, ann); break;
-    }
-  });
+  holdings.forEach(h =>
+    forEachPaymentMonth(h, (m, amt) => {
+      months[m].gross += amt;
+      months[m].payers.push({ symbol: h.symbol, amount: amt });
+    })
+  );
   months.forEach(m => m.payers.sort((a,b) => b.amount - a.amount));
   return months;
 }
@@ -1077,10 +1032,18 @@ const PALETTE = [
   '#79bfff','#56d364','#d2a8ff','#ffb347','#f9e44a',
   '#38d9a9','#ff6b6b','#74c0fc','#a9e34b','#da77f2'
 ];
+const CHART_TEXT = { color: '#8b949e', font: { size: 11 } };
+const CHART_GRID = { color: '#21262d' };
+const FREQ_LABELS = { monthly: 'Monatlich', quarterly: 'Quartalsweise', annually: 'Jährlich', biannually: 'Halbjährlich', none: 'Keine' };
+let _stats = {};
 
 function destroyChart(id) {
   const c = Chart.getChart(id);
   if (c) c.destroy();
+}
+
+function destroyAllCharts() {
+  [...Object.values(Chart.instances)].forEach(c => c.destroy());
 }
 
 function doughnutChart(id, labels, data, title) {
@@ -1097,7 +1060,7 @@ function doughnutChart(id, labels, data, title) {
       maintainAspectRatio: true,
       cutout: '65%',
       plugins: {
-        legend: { position: 'right', labels: { color: '#8b949e', font: { size: 11 }, padding: 10, boxWidth: 12 } },
+        legend: { position: 'right', labels: { ...CHART_TEXT, padding: 10, boxWidth: 12 } },
         tooltip: {
           callbacks: {
             label: ctx => {
@@ -1122,12 +1085,12 @@ function barChart(id, labels, datasets, opts = {}) {
       maintainAspectRatio: true,
       indexAxis: opts.horizontal ? 'y' : 'x',
       plugins: {
-        legend: { display: opts.legend !== false, labels: { color: '#8b949e', font: { size: 11 } } },
+        legend: { display: opts.legend !== false, labels: { ...CHART_TEXT } },
         tooltip: { callbacks: opts.tooltipCb || {} }
       },
       scales: {
-        x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 } }, stacked: opts.stacked },
-        y: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 } }, stacked: opts.stacked }
+        x: { grid: { ...CHART_GRID }, ticks: { ...CHART_TEXT }, stacked: opts.stacked },
+        y: { grid: { ...CHART_GRID }, ticks: { ...CHART_TEXT }, stacked: opts.stacked }
       }
     }
   });
@@ -1140,6 +1103,7 @@ function renderKPIs(held) {
   const totalGain   = held.reduce((s, h) => s + h.gain, 0);
   const grossDiv    = held.reduce((s, h) => s + h.totalDividendRate, 0);
   const netDiv      = grossDiv * (1 - TAX);
+  const avgCagr     = weightedAvgCagr(held);
   const gainRel     = totalInv > 0 ? totalGain / totalInv : 0;
   const yieldCurr   = totalVal > 0 ? grossDiv / totalVal : 0;
 
@@ -1155,7 +1119,7 @@ function renderKPIs(held) {
   document.getElementById('kpi-div-yield').textContent  = 'Ø ' + fmtPct(yieldCurr) + ' Rendite';
   document.getElementById('kpi-div-net').textContent    = fmtEur(netDiv, 0);
 
-  return { totalVal, totalInv, totalGain, grossDiv, netDiv, gainRel };
+  return { totalVal, totalInv, totalGain, grossDiv, netDiv, gainRel, avgCagr };
 }
 
 // ── Render Goal ───────────────────────────────────────────────────────
@@ -1191,7 +1155,7 @@ function renderGoal(grossDiv, netDiv, held) {
   const nextMs = MILESTONES.find(ms => netDiv < ms.amount);
   if (nextMs) {
     document.getElementById('goal-next-ms').textContent = nextMs.title + ' (' + fmtEur(nextMs.amount, 0) + ')';
-    const avgCagr = weightedAvgCagr(held);
+    const avgCagr = _stats.avgCagr;
     if (avgCagr > 0) {
       const yrs = Math.log(nextMs.amount / netDiv) / Math.log(1 + avgCagr);
       const etaTxt = yrs < 1 ? '< 1 Jahr' : yrs < 1.5 ? '~1 Jahr' : `~${Math.round(yrs)} Jahre`;
@@ -1299,8 +1263,7 @@ function renderDividenden(held) {
     freqDiv[f] = (freqDiv[f] || 0) + h.totalDividendRate;
   });
   const fKeys = Object.keys(freqDiv).sort((a,b) => freqDiv[b] - freqDiv[a]);
-  const freqLabels = { monthly: 'Monatlich', quarterly: 'Quartalsweise', annually: 'Jährlich', biannually: 'Halbjährlich', none: 'Keine' };
-  doughnutChart('chart-freq', fKeys.map(k => freqLabels[k] || k), fKeys.map(k => freqDiv[k]));
+  doughnutChart('chart-freq', fKeys.map(k => FREQ_LABELS[k] || k), fKeys.map(k => freqDiv[k]));
 
   // Div by type
   const typeDiv = groupBy(held.filter(h => h.totalDividendRate > 0), 'securityType', 'totalDividendRate');
@@ -1377,8 +1340,7 @@ function renderWachstum(held) {
   );
 
   // Income path line chart (years 0–12)
-  const totalGrossW = held.reduce((s,h) => s + h.totalDividendRate, 0);
-  const avgCagrW    = weightedAvgCagr(held);
+  const { grossDiv: totalGrossW, avgCagr: avgCagrW } = _stats;
   const _cy = new Date().getFullYear();
   const yearLabels  = Array.from({length:13}, (_,i) => String(_cy + i));
   const netPath     = yearLabels.map((_,i) => Math.round(totalGrossW * Math.pow(1+avgCagrW,i) * (1-TAX)));
@@ -1394,19 +1356,18 @@ function renderWachstum(held) {
     options: {
       responsive:true, maintainAspectRatio:true,
       plugins: {
-        legend: { labels: { color:'#8b949e', font:{size:11} } },
+        legend: { labels: { ...CHART_TEXT } },
         tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmtEur(ctx.raw,0)}` } }
       },
       scales: {
-        x: { grid:{color:'#21262d'}, ticks:{color:'#8b949e',font:{size:11}} },
-        y: { grid:{color:'#21262d'}, ticks:{color:'#8b949e',font:{size:11}, callback: v => fmtEur(v,0)} }
+        x: { grid: { ...CHART_GRID }, ticks: { ...CHART_TEXT } },
+        y: { grid: { ...CHART_GRID }, ticks: { ...CHART_TEXT, callback: v => fmtEur(v,0) } }
       }
     }
   });
 
   // Projection table
-  const totalGross = held.reduce((s, h) => s + h.totalDividendRate, 0);
-  const avgCagr    = weightedAvgCagr(held);
+  const { grossDiv: totalGross, avgCagr } = _stats;
 
   const tbody = document.getElementById('projection-body');
   tbody.innerHTML = '';
@@ -1472,8 +1433,7 @@ function runSimulation() {
   const reinvest = _simReinvest;
   const YEARS    = 20;
 
-  const grossDiv = held.reduce((s,h) => s + h.totalDividendRate, 0);
-  const avgCagr  = weightedAvgCagr(held);
+  const { grossDiv, avgCagr } = _stats;
   const { base, sim } = simulate(grossDiv, avgCagr, monthly, yieldR, cagrR, reinvest, YEARS);
 
   const baseGoalYr = base.findIndex(r => r.net >= GOAL);
@@ -1538,12 +1498,12 @@ function runSimulation() {
     options: {
       responsive: true, maintainAspectRatio: true,
       plugins: {
-        legend: { labels: { color: '#8b949e', font: {size:11} } },
+        legend: { labels: { ...CHART_TEXT } },
         tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmtEur(ctx.raw, 0)}` } }
       },
       scales: {
-        x: { grid:{color:'#21262d'}, ticks:{color:'#8b949e', font:{size:11}} },
-        y: { grid:{color:'#21262d'}, ticks:{color:'#8b949e', font:{size:11}, callback: v => fmtEur(v,0)} }
+        x: { grid: { ...CHART_GRID }, ticks: { ...CHART_TEXT } },
+        y: { grid: { ...CHART_GRID }, ticks: { ...CHART_TEXT, callback: v => fmtEur(v,0) } }
       }
     }
   });
@@ -1597,10 +1557,7 @@ const AVG_MIETE      = 9600;          // ~800 €/mo avg rent including utilitie
 const FIRE_SWR       = 0.04;          // 4% safe withdrawal rate
 
 function renderFreiheit(held) {
-  const grossDiv = held.reduce((s,h) => s + h.totalDividendRate, 0);
-  const netDiv   = grossDiv * (1 - TAX);
-  const totalVal = held.reduce((s,h) => s + h.value, 0);
-  const totalInv = held.reduce((s,h) => s + h.buyinTotal, 0);
+  const { grossDiv, netDiv, totalVal, totalInv } = _stats;
 
   const perHour   = netDiv / (365 * 24);
   const perSleep  = netDiv / (365 * 8);
@@ -1733,8 +1690,7 @@ function renderKalender(held) {
 
 // ── Render Meilensteine Tab ───────────────────────────────────────────
 function renderMeilensteine(held) {
-  const netDiv  = held.reduce((s, h) => s + h.totalDividendRate, 0) * (1 - TAX);
-  const avgCagr = weightedAvgCagr(held);
+  const { netDiv, avgCagr } = _stats;
   const nextIdx = MILESTONES.findIndex(ms => netDiv < ms.amount);
 
   document.getElementById('milestone-grid').innerHTML = MILESTONES.map((ms, idx) => {
@@ -1778,10 +1734,8 @@ function renderMeilensteine(held) {
 
 // ── Render Analyse Tab ────────────────────────────────────────────────
 function renderAnalyse(held) {
-  const totalVal = held.reduce((s, h) => s + h.value, 0);
-  const totalDiv = held.reduce((s, h) => s + h.totalDividendRate, 0);
+  const { totalVal, grossDiv: totalDiv, avgCagr } = _stats;
   const avgYield = totalVal > 0 ? totalDiv / totalVal : 0;
-  const avgCagr  = weightedAvgCagr(held);
 
   // HHI (Herfindahl-Hirschman Index, by portfolio value)
   const hhi = held.reduce((s, h) => { const w = totalVal > 0 ? h.value / totalVal : 0; return s + w * w; }, 0);
@@ -1973,8 +1927,10 @@ function setupTableSort() {
 
 // ── Main render ───────────────────────────────────────────────────────
 function renderAll(rows, filename) {
+  destroyAllCharts();
   const held = rows.filter(h => h.quantity > 0);
-  const { grossDiv, netDiv } = renderKPIs(held);
+  _stats = renderKPIs(held);
+  const { grossDiv, netDiv } = _stats;
   renderGoal(grossDiv, netDiv, held);
   renderUebersicht(held);
   renderDividenden(held);
