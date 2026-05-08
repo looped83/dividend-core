@@ -315,6 +315,85 @@
     .flex { display: flex; gap: 12px; align-items: center; }
     .mt16 { margin-top: 16px; }
     .hidden { display: none !important; }
+
+    /* ── Goal Micro ──────────────────────────────────────────────────── */
+    .goal-micro {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    @media (max-width: 900px) { .goal-micro { grid-template-columns: repeat(2, 1fr); } }
+    .goal-micro-label { font-size: 10px; color: var(--txt2); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+    .goal-micro-val   { font-size: 1.1rem; font-weight: 700; }
+    .goal-micro-target { font-size: 10px; color: var(--txt2); margin-top: 2px; }
+
+    /* ── Milestones ──────────────────────────────────────────────────── */
+    .milestone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .milestone-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      position: relative;
+    }
+    .milestone-card.achieved { border-color: var(--green); }
+    .milestone-card.next-up  { border-color: var(--blue); box-shadow: 0 0 0 1px rgba(88,166,255,.15); }
+    .ms-icon    { font-size: 1.6rem; margin-bottom: 8px; display: block; }
+    .ms-title   { font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; }
+    .ms-sub     { color: var(--txt2); font-size: 11px; margin-bottom: 10px; }
+    .ms-amount  { font-size: 1.3rem; font-weight: 800; margin-bottom: 2px; }
+    .ms-monthly { font-size: 11px; color: var(--txt2); margin-bottom: 10px; }
+    .ms-check {
+      position: absolute; top: 14px; right: 14px;
+      width: 26px; height: 26px;
+      background: var(--green); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; color: #0d1117; font-weight: 800;
+    }
+    .ms-progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--txt2); margin-bottom: 4px; }
+    .ms-eta { font-size: 11px; color: var(--txt2); margin-top: 8px; }
+    .ms-eta strong { color: var(--blue); }
+
+    /* ── Analyse ─────────────────────────────────────────────────────── */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .metric-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+    .metric-label { font-size: 10px; color: var(--txt2); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+    .metric-value { font-size: 1.4rem; font-weight: 700; margin-bottom: 4px; }
+    .metric-sub   { font-size: 11px; color: var(--txt2); }
+    .risk-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 20px;
+      font-size: 10px; font-weight: 600; white-space: nowrap;
+    }
+    .risk-high { background: rgba(248,81,73,.15);  color: var(--red);    border: 1px solid rgba(248,81,73,.3); }
+    .risk-med  { background: rgba(227,179,65,.15); color: var(--yellow); border: 1px solid rgba(227,179,65,.3); }
+    .risk-low  { background: rgba(63,185,80,.15);  color: var(--green);  border: 1px solid rgba(63,185,80,.3); }
+    .perf-table { width: 100%; font-size: 12.5px; }
+    .perf-table th { padding: 8px 12px; font-size: 11px; color: var(--txt2); font-weight: 600; border-bottom: 1px solid var(--border); text-align: left; background: var(--bg3); }
+    .perf-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+    .perf-table tr:last-child td { border-bottom: none; }
+    .risk-table { width: 100%; font-size: 12.5px; }
+    .risk-table th { padding: 10px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--txt2); font-weight: 600; background: var(--bg3); border-bottom: 1px solid var(--border); text-align: left; }
+    .risk-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .risk-table tr:last-child td { border-bottom: none; }
   </style>
 </head>
 <body>
@@ -409,7 +488,29 @@
         </div>
         <div class="goal-remaining">
           Noch <strong id="goal-missing">–</strong> bis zum Ziel &nbsp;·&nbsp;
-          Ø monatlich netto: <strong id="goal-monthly" style="color:var(--green)">–</strong>
+          Nächster Meilenstein: <strong id="goal-next-ms" style="color:var(--blue)">–</strong>
+        </div>
+        <div class="goal-micro">
+          <div class="goal-micro-item">
+            <div class="goal-micro-label">Pro Monat (Netto)</div>
+            <div class="goal-micro-val pos" id="gm-monthly">–</div>
+            <div class="goal-micro-target">Ziel: 3.500 €</div>
+          </div>
+          <div class="goal-micro-item">
+            <div class="goal-micro-label">Pro Woche (Netto)</div>
+            <div class="goal-micro-val" id="gm-weekly">–</div>
+            <div class="goal-micro-target">Ziel: 808 €</div>
+          </div>
+          <div class="goal-micro-item">
+            <div class="goal-micro-label">Pro Tag (Netto)</div>
+            <div class="goal-micro-val" id="gm-daily">–</div>
+            <div class="goal-micro-target">Ziel: 115 €</div>
+          </div>
+          <div class="goal-micro-item">
+            <div class="goal-micro-label">Nächster Meilenstein in</div>
+            <div class="goal-micro-val neu" id="gm-eta">–</div>
+            <div class="goal-micro-target" id="gm-eta-sub">bei Ø CAGR</div>
+          </div>
         </div>
       </div>
     </div>
@@ -419,6 +520,8 @@
       <button class="tab-btn active" data-tab="uebersicht">Übersicht</button>
       <button class="tab-btn" data-tab="dividenden">Dividenden</button>
       <button class="tab-btn" data-tab="wachstum">Wachstum</button>
+      <button class="tab-btn" data-tab="meilensteine">Meilensteine</button>
+      <button class="tab-btn" data-tab="analyse">Analyse</button>
       <button class="tab-btn" data-tab="positionen">Positionen</button>
     </div>
 
@@ -464,10 +567,6 @@
           <canvas id="chart-div-type"></canvas>
         </div>
       </div>
-      <div class="chart-card">
-        <h3>Nächste Dividendenzahlungen (innerhalb 60 Tage)</h3>
-        <div class="upcoming-grid" id="upcoming-divs"></div>
-      </div>
     </div>
 
     <!-- Tab: Wachstum -->
@@ -500,6 +599,63 @@
           </thead>
           <tbody id="projection-body"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Tab: Meilensteine -->
+    <div class="tab-panel" id="tab-meilensteine">
+      <div class="milestone-grid" id="milestone-grid"></div>
+      <div class="chart-card">
+        <h3>Meilensteinpfad – Netto-Dividenden vs. Zielwerte</h3>
+        <canvas id="chart-milestone-path" style="max-height:280px"></canvas>
+      </div>
+    </div>
+
+    <!-- Tab: Analyse -->
+    <div class="tab-panel" id="tab-analyse">
+      <div class="metric-grid" id="analyse-metrics"></div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>Dividenden nach Währung</h3>
+          <canvas id="chart-currency"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Yield-Verteilung der Positionen</h3>
+          <canvas id="chart-yield-dist"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Dividendenkonzentration – Top 10</h3>
+          <canvas id="chart-div-conc"></canvas>
+        </div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>Top 5 Performer (nach G/V %)</h3>
+          <table class="perf-table">
+            <thead><tr><th>Position</th><th>Gewinn</th><th>G/V %</th><th>Dividende/J.</th></tr></thead>
+            <tbody id="best-performers"></tbody>
+          </table>
+        </div>
+        <div class="chart-card">
+          <h3>Flop 5 Performer (nach G/V %)</h3>
+          <table class="perf-table">
+            <thead><tr><th>Position</th><th>Verlust</th><th>G/V %</th><th>Dividende/J.</th></tr></thead>
+            <tbody id="worst-performers"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="chart-card" style="margin-top:16px">
+        <h3>Risikoindikatoren</h3>
+        <div style="overflow-x:auto">
+          <table class="risk-table">
+            <thead>
+              <tr>
+                <th>Position</th><th>Yield</th><th>CAGR (5J)</th><th>G/V %</th><th>Dividende/J.</th><th>Risikofaktoren</th>
+              </tr>
+            </thead>
+            <tbody id="risk-positions"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -622,19 +778,12 @@ function groupBy(holdings, key, valueKey) {
   return map;
 }
 
-// ── Upcoming dividends (next 60 days) ────────────────────────────────
-function upcomingDivs(holdings) {
-  const today = new Date();
-  const limit = new Date(today); limit.setDate(limit.getDate() + 60);
-  return holdings
-    .filter(h => h.quantity > 0 && h.payDate)
-    .map(h => {
-      const pd = new Date(h.payDate);
-      const ex = new Date(h.exDate);
-      return { ...h, _payDate: pd, _exDate: ex };
-    })
-    .filter(h => h._payDate >= today && h._payDate <= limit)
-    .sort((a, b) => a._payDate - b._payDate);
+// ── Weighted average CAGR (by dividend contribution) ─────────────────
+function weightedAvgCagr(held) {
+  const pos = held.filter(h => h.dividendCagr > 0 && h.totalDividendRate > 0);
+  const totDiv = pos.reduce((s, h) => s + h.totalDividendRate, 0);
+  if (totDiv === 0) return 0;
+  return pos.reduce((s, h) => s + h.dividendCagr * h.totalDividendRate, 0) / totDiv;
 }
 
 // ── Chart helpers ─────────────────────────────────────────────────────
@@ -725,19 +874,51 @@ function renderKPIs(held) {
 }
 
 // ── Render Goal ───────────────────────────────────────────────────────
+const MILESTONES = [
+  { amount: 6000,  title: 'Erster Schritt',       desc: 'Rechnungen & Abos gedeckt',  icon: '💡' },
+  { amount: 12000, title: 'Basis-Sicherheit',      desc: 'Grundlebenshaltungskosten',   icon: '🏠' },
+  { amount: 18000, title: 'Solides Einkommen',     desc: '1.500 € monatlich',           icon: '📈' },
+  { amount: 24000, title: 'Halbzeit!',             desc: '2.000 € monatlich',           icon: '🎯' },
+  { amount: 30000, title: 'Komfortzone',           desc: '2.500 € monatlich',           icon: '✨' },
+  { amount: 36000, title: 'Finanzielle Freiheit',  desc: '3.000 € monatlich',           icon: '🚀' },
+  { amount: 42000, title: 'Ziel erreicht!',        desc: '3.500 € monatlich – Fertig!', icon: '🏆' },
+];
+
 let goalChartInst = null;
-function renderGoal(grossDiv, netDiv) {
+function renderGoal(grossDiv, netDiv, held) {
   const pct     = Math.min(netDiv / GOAL, 1);
   const pctDisp = Math.min(netDiv / GOAL * 100, 100);
   const missing = Math.max(GOAL - netDiv, 0);
 
-  document.getElementById('goal-pct-txt').textContent = Math.round(pctDisp) + '%';
-  document.getElementById('gbar-net-val').textContent  = fmtEur(netDiv, 0);
+  document.getElementById('goal-pct-txt').textContent  = Math.round(pctDisp) + '%';
+  document.getElementById('gbar-net-val').textContent   = fmtEur(netDiv, 0);
   document.getElementById('gbar-gross-val').textContent = fmtEur(grossDiv, 0);
   document.getElementById('gbar-net').style.width   = Math.min(pct * 100, 100) + '%';
   document.getElementById('gbar-gross').style.width = Math.min(grossDiv / GOAL * 100, 100) + '%';
   document.getElementById('goal-missing').textContent = fmtEur(missing, 0);
-  document.getElementById('goal-monthly').textContent = fmtEur(netDiv / 12, 0);
+
+  // Micro breakdown
+  document.getElementById('gm-monthly').textContent = fmtEur(netDiv / 12, 0);
+  document.getElementById('gm-weekly').textContent  = fmtEur(netDiv / 52, 0);
+  document.getElementById('gm-daily').textContent   = fmtEur(netDiv / 365, 0);
+
+  // Next milestone
+  const nextMs = MILESTONES.find(ms => netDiv < ms.amount);
+  if (nextMs) {
+    document.getElementById('goal-next-ms').textContent = nextMs.title + ' (' + fmtEur(nextMs.amount, 0) + ')';
+    const avgCagr = weightedAvgCagr(held);
+    if (avgCagr > 0) {
+      const yrs = Math.log(nextMs.amount / netDiv) / Math.log(1 + avgCagr);
+      const etaTxt = yrs < 1 ? '< 1 Jahr' : yrs < 1.5 ? '~1 Jahr' : `~${Math.round(yrs)} Jahre`;
+      document.getElementById('gm-eta').textContent     = etaTxt;
+      document.getElementById('gm-eta-sub').textContent = 'bei Ø ' + (avgCagr * 100).toFixed(1) + '% CAGR';
+    } else {
+      document.getElementById('gm-eta').textContent = '–';
+    }
+  } else {
+    document.getElementById('goal-next-ms').textContent = 'Ziel erreicht! 🏆';
+    document.getElementById('gm-eta').textContent = '🏆';
+  }
 
   destroyChart('goal-chart');
   const ctx = document.getElementById('goal-chart').getContext('2d');
@@ -828,23 +1009,6 @@ function renderDividenden(held) {
   const typeDiv = groupBy(held.filter(h => h.totalDividendRate > 0), 'securityType', 'totalDividendRate');
   const tdKeys = Object.keys(typeDiv).sort((a,b) => typeDiv[b] - typeDiv[a]);
   doughnutChart('chart-div-type', tdKeys, tdKeys.map(k => typeDiv[k]));
-
-  // Upcoming
-  const upcoming = upcomingDivs(held);
-  const upEl = document.getElementById('upcoming-divs');
-  if (upcoming.length === 0) {
-    upEl.innerHTML = '<p style="color:var(--txt2);font-size:13px;">Keine Zahlungen in den nächsten 60 Tagen.</p>';
-  } else {
-    upEl.innerHTML = upcoming.map(h => `
-      <div class="upcoming-card">
-        <div class="uc-name">${h.name}</div>
-        <div class="uc-sym">${h.symbol}</div>
-        <div class="uc-row">Ex-Datum <span>${h.exDate}</span></div>
-        <div class="uc-row">Zahltag <span>${h.payDate}</span></div>
-        <div class="uc-row">Dividende/J. <span class="pos">${fmtEur(h.totalDividendRate, 0)}</span></div>
-        <div class="uc-row">Yield <span>${fmtPct(h.dividendYield)}</span></div>
-      </div>`).join('');
-  }
 }
 
 // ── Render Wachstum Tab ───────────────────────────────────────────────
@@ -897,9 +1061,7 @@ function renderWachstum(held) {
 
   // Projection table
   const totalGross = held.reduce((s, h) => s + h.totalDividendRate, 0);
-  const avgCagr    = held.filter(h => h.dividendCagr > 0 && h.totalDividendRate > 0)
-    .reduce((s, h) => s + h.dividendCagr * h.totalDividendRate, 0)
-    / (held.filter(h => h.dividendCagr > 0 && h.totalDividendRate > 0).reduce((s, h) => s + h.totalDividendRate, 0) || 1);
+  const avgCagr    = weightedAvgCagr(held);
 
   const tbody = document.getElementById('projection-body');
   tbody.innerHTML = '';
@@ -922,6 +1084,179 @@ function renderWachstum(held) {
       <td style="color:var(--txt2)">${growth}</td>
     </tr>`;
   }
+}
+
+// ── Render Meilensteine Tab ───────────────────────────────────────────
+function renderMeilensteine(held) {
+  const netDiv  = held.reduce((s, h) => s + h.totalDividendRate, 0) * (1 - TAX);
+  const avgCagr = weightedAvgCagr(held);
+  const nextIdx = MILESTONES.findIndex(ms => netDiv < ms.amount);
+
+  document.getElementById('milestone-grid').innerHTML = MILESTONES.map((ms, idx) => {
+    const achieved = netDiv >= ms.amount;
+    const isNext   = idx === nextIdx;
+    const pct      = Math.min(netDiv / ms.amount * 100, 100);
+    const remaining = Math.max(ms.amount - netDiv, 0);
+    let etaHtml = '';
+    if (!achieved && avgCagr > 0) {
+      const yrs = Math.log(ms.amount / netDiv) / Math.log(1 + avgCagr);
+      const eta = yrs < 1 ? 'In weniger als einem Jahr' : yrs < 1.5 ? 'In ca. 1 Jahr' : `In ca. ${Math.round(yrs)} Jahren`;
+      etaHtml = `<div class="ms-eta">Noch <strong>${fmtEur(remaining, 0)}</strong> · ${eta}</div>`;
+    } else if (achieved) {
+      etaHtml = `<div class="ms-eta" style="color:var(--green)">✓ Erreicht</div>`;
+    }
+    return `<div class="milestone-card ${achieved ? 'achieved' : ''} ${isNext ? 'next-up' : ''}">
+      ${achieved ? '<div class="ms-check">✓</div>' : ''}
+      <span class="ms-icon">${ms.icon}</span>
+      <div class="ms-title">${ms.title}</div>
+      <div class="ms-sub">${ms.desc}</div>
+      <div class="ms-amount ${achieved ? 'pos' : ''}">${fmtEur(ms.amount, 0)}/Jahr</div>
+      <div class="ms-monthly">${fmtEur(ms.amount / 12, 0)}/Monat</div>
+      <div class="ms-progress-label"><span>Fortschritt</span><span>${pct.toFixed(0)}%</span></div>
+      <div class="bar-track"><div class="bar-fill ${achieved ? 'bar-green' : 'bar-blue'}" style="width:${pct.toFixed(0)}%"></div></div>
+      ${etaHtml}
+    </div>`;
+  }).join('');
+
+  // Milestone path bar chart
+  barChart('chart-milestone-path',
+    MILESTONES.map(ms => fmtEur(ms.amount, 0)),
+    [
+      { label: 'Ziel',     data: MILESTONES.map(ms => ms.amount), backgroundColor: 'rgba(48,54,61,.9)', borderRadius: 4 },
+      { label: 'Aktuell', data: MILESTONES.map(ms => Math.min(netDiv, ms.amount)),
+        backgroundColor: MILESTONES.map(ms => netDiv >= ms.amount ? 'rgba(63,185,80,.8)' : 'rgba(88,166,255,.7)'),
+        borderRadius: 4 }
+    ],
+    { tooltipCb: { label: ctx => ` ${ctx.dataset.label}: ${fmtEur(ctx.raw, 0)}` } }
+  );
+}
+
+// ── Render Analyse Tab ────────────────────────────────────────────────
+function renderAnalyse(held) {
+  const totalVal = held.reduce((s, h) => s + h.value, 0);
+  const totalDiv = held.reduce((s, h) => s + h.totalDividendRate, 0);
+  const avgYield = totalVal > 0 ? totalDiv / totalVal : 0;
+  const avgCagr  = weightedAvgCagr(held);
+
+  // HHI (Herfindahl-Hirschman Index, by portfolio value)
+  const hhi = held.reduce((s, h) => { const w = totalVal > 0 ? h.value / totalVal : 0; return s + w * w; }, 0);
+  const hhiLabel = hhi < 0.10 ? 'Sehr diversifiziert' : hhi < 0.15 ? 'Gut diversifiziert' : hhi < 0.25 ? 'Mäßig konzentriert' : 'Stark konzentriert';
+  const hhiCls   = hhi < 0.15 ? 'pos' : hhi < 0.25 ? '' : 'neg';
+
+  // Top-5 concentration
+  const top5Pct = [...held].sort((a,b) => b.value - a.value).slice(0,5).reduce((s,h) => s + h.value, 0) / (totalVal || 1);
+
+  const yieldTrapPos = held.filter(h => h.dividendYield > 0.08 && h.totalDividendRate > 0);
+  const negCagrPos   = held.filter(h => h.dividendCagr < -0.001 && h.totalDividendRate > 0);
+  const divPositions = held.filter(h => h.totalDividendRate > 0).length;
+
+  document.getElementById('analyse-metrics').innerHTML = `
+    <div class="metric-card">
+      <div class="metric-label">Diversifikation (HHI)</div>
+      <div class="metric-value ${hhiCls}">${(hhi * 100).toFixed(1)}</div>
+      <div class="metric-sub">${hhiLabel}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Top-5-Konzentration</div>
+      <div class="metric-value ${top5Pct > 0.5 ? 'neg' : ''}">${(top5Pct * 100).toFixed(0)}%</div>
+      <div class="metric-sub">der 5 größten Positionen</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Ø Dividendenrendite</div>
+      <div class="metric-value">${(avgYield * 100).toFixed(2)}%</div>
+      <div class="metric-sub">gewichtet nach Depotwert</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Ø Dividenden-CAGR (5J)</div>
+      <div class="metric-value ${avgCagr > 0 ? 'pos' : 'neg'}">${(avgCagr * 100).toFixed(1)}%</div>
+      <div class="metric-sub">gewichtet nach Dividende</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Dividend-Payer</div>
+      <div class="metric-value neu">${divPositions}</div>
+      <div class="metric-sub">von ${held.length} Positionen im Depot</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Yield-Trap Kandidaten</div>
+      <div class="metric-value ${yieldTrapPos.length > 3 ? 'neg' : yieldTrapPos.length > 0 ? '' : 'pos'}">${yieldTrapPos.length}</div>
+      <div class="metric-sub">Positionen mit Yield > 8%</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Neg. CAGR Positionen</div>
+      <div class="metric-value ${negCagrPos.length > 0 ? 'neg' : 'pos'}">${negCagrPos.length}</div>
+      <div class="metric-sub">sinkende Dividendenhistorie</div>
+    </div>`;
+
+  // Currency exposure by dividend (originalDividendCurrency or currency)
+  const currencyDiv = {};
+  held.filter(h => h.totalDividendRate > 0).forEach(h => {
+    const c = (h.originalDividendCurrency || h.currency || 'EUR');
+    currencyDiv[c] = (currencyDiv[c] || 0) + h.totalDividendRate;
+  });
+  const cKeys = Object.keys(currencyDiv).sort((a,b) => currencyDiv[b] - currencyDiv[a]);
+  doughnutChart('chart-currency', cKeys, cKeys.map(k => currencyDiv[k]));
+
+  // Yield distribution histogram
+  const yBuckets = { '0–2%': 0, '2–4%': 0, '4–6%': 0, '6–8%': 0, '>8%': 0 };
+  held.filter(h => h.dividendYield > 0).forEach(h => {
+    const y = h.dividendYield * 100;
+    if (y < 2) yBuckets['0–2%']++;
+    else if (y < 4) yBuckets['2–4%']++;
+    else if (y < 6) yBuckets['4–6%']++;
+    else if (y < 8) yBuckets['6–8%']++;
+    else yBuckets['>8%']++;
+  });
+  barChart('chart-yield-dist', Object.keys(yBuckets),
+    [{ label: 'Positionen', data: Object.values(yBuckets),
+       backgroundColor: ['#3fb950','#58a6ff','#bc8cff','#f0883e','#f85149'], borderRadius: 4 }],
+    { legend: false, tooltipCb: { label: ctx => ` ${ctx.raw} Positionen` } }
+  );
+
+  // Dividend concentration top 10
+  const top10Div = [...held].filter(h => h.totalDividendRate > 0).sort((a,b) => b.totalDividendRate - a.totalDividendRate).slice(0,10);
+  barChart('chart-div-conc', top10Div.map(h => h.symbol),
+    [{ label: '% der Gesamtdividende',
+       data: top10Div.map(h => +(h.totalDividendRate / totalDiv * 100).toFixed(1)),
+       backgroundColor: PALETTE, borderRadius: 4 }],
+    { legend: false, tooltipCb: { label: ctx => ` ${ctx.raw.toFixed(1)}% der Gesamtdividende` } }
+  );
+
+  // Best / worst performers
+  const perfPos = held.filter(h => h.buyinTotal > 0 && h.gain !== 0);
+  const best  = [...perfPos].sort((a,b) => b.gainRel - a.gainRel).slice(0,5);
+  const worst = [...perfPos].sort((a,b) => a.gainRel - b.gainRel).slice(0,5);
+
+  const perfRow = (h, cls) => `<tr>
+    <td><strong>${h.symbol}</strong><br><span style="font-size:11px;color:var(--txt2)">${h.name.substring(0,28)}</span></td>
+    <td class="${cls}">${cls==='pos'?'+':''}${fmtEur(h.gain,0)}</td>
+    <td class="${cls}">${cls==='pos'?'+':''}${fmtPct(h.gainRel)}</td>
+    <td class="${h.totalDividendRate>0?'pos':''}">${h.totalDividendRate>0?fmtEur(h.totalDividendRate,0):'–'}</td>
+  </tr>`;
+  document.getElementById('best-performers').innerHTML  = best.map(h => perfRow(h,'pos')).join('');
+  document.getElementById('worst-performers').innerHTML = worst.map(h => perfRow(h,'neg')).join('');
+
+  // Risk table
+  const riskRows = held.filter(h =>
+    (h.dividendYield > 0.08 && h.totalDividendRate > 0) ||
+    (h.dividendCagr < -0.001 && h.totalDividendRate > 0)
+  ).sort((a,b) => b.dividendYield - a.dividendYield);
+
+  document.getElementById('risk-positions').innerHTML = riskRows.length > 0
+    ? riskRows.map(h => {
+        const tags = [];
+        if (h.dividendYield > 0.08) tags.push('<span class="risk-tag risk-high">Yield &gt; 8%</span>');
+        if (h.dividendCagr < -0.05) tags.push('<span class="risk-tag risk-high">CAGR &lt; −5%</span>');
+        else if (h.dividendCagr < 0) tags.push('<span class="risk-tag risk-med">Neg. CAGR</span>');
+        return `<tr>
+          <td><strong>${h.symbol}</strong> <span style="color:var(--txt2);font-size:11px">${h.name.substring(0,26)}</span></td>
+          <td>${fmtPct(h.dividendYield)}</td>
+          <td class="${h.dividendCagr >= 0 ? 'pos' : 'neg'}">${(h.dividendCagr*100).toFixed(1)}%</td>
+          <td class="${h.gainRel >= 0 ? 'pos' : 'neg'}">${(h.gainRel*100).toFixed(1)}%</td>
+          <td class="pos">${fmtEur(h.totalDividendRate,0)}</td>
+          <td>${tags.join(' ')}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="6" style="color:var(--txt2);text-align:center;padding:20px">Keine Risikopositionen identifiziert ✓</td></tr>';
 }
 
 // ── Positions Table ───────────────────────────────────────────────────
@@ -995,10 +1330,12 @@ function setupTableSort() {
 function renderAll(rows, filename) {
   const held = rows.filter(h => h.quantity > 0);
   const { grossDiv, netDiv } = renderKPIs(held);
-  renderGoal(grossDiv, netDiv);
+  renderGoal(grossDiv, netDiv, held);
   renderUebersicht(held);
   renderDividenden(held);
   renderWachstum(held);
+  renderMeilensteine(held);
+  renderAnalyse(held);
   renderPositions(rows);
 
   const now = filename
