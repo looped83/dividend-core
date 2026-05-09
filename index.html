@@ -290,6 +290,23 @@
     .projection-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
     .projection-table tr:last-child td { border-bottom: none; }
 
+    /* ── Goal Edit ───────────────────────────────────────────────────── */
+    .goal-edit-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+    .goal-edit-row h2 { margin: 0; }
+    .goal-edit-btn {
+      background: none; border: 1px solid transparent; border-radius: 6px;
+      color: var(--txt2); cursor: pointer; padding: 3px 7px; font-size: 13px;
+      line-height: 1; flex-shrink: 0; transition: color .15s, border-color .15s;
+    }
+    .goal-edit-btn:hover { color: var(--blue); border-color: var(--border); }
+    .goal-edit-form { display: flex; align-items: center; gap: 6px; margin-bottom: 16px; }
+    .goal-edit-input {
+      width: 130px; padding: 5px 10px; background: var(--bg3);
+      border: 1px solid var(--blue); border-radius: 6px;
+      color: var(--txt); font-size: 15px; font-weight: 700;
+    }
+    .goal-edit-input:focus { outline: none; }
+
     /* ── Goal Micro ──────────────────────────────────────────────────── */
     .goal-micro {
       display: grid;
@@ -578,11 +595,19 @@
         <canvas id="goal-chart"></canvas>
         <div class="goal-ring-center">
           <div class="goal-pct" id="goal-pct-txt">0%</div>
-          <div class="goal-pct-label">von 42.000 €</div>
+          <div class="goal-pct-label" id="goal-ring-label">von 42.000 €</div>
         </div>
       </div>
       <div class="goal-info">
-        <h2>Ziel: 42.000 € jährliche Netto-Dividenden</h2>
+        <div class="goal-edit-row">
+          <h2 id="goal-title">Ziel: 42.000 € jährliche Netto-Dividenden</h2>
+          <button class="goal-edit-btn" id="goal-edit-btn" title="Ziel bearbeiten">✏️</button>
+        </div>
+        <div class="goal-edit-form" id="goal-edit-form" style="display:none">
+          <input type="number" class="goal-edit-input" id="goal-edit-input" min="1000" step="500">
+          <button class="btn btn-primary" id="goal-save-btn" style="padding:5px 12px">✓</button>
+          <button class="btn" id="goal-cancel-btn" style="padding:5px 12px">✗</button>
+        </div>
         <div class="goal-bars">
           <div class="goal-bar-item">
             <label><span>Netto-Dividenden</span><span id="gbar-net-val">0 €</span></label>
@@ -601,17 +626,17 @@
           <div class="goal-micro-item">
             <div class="goal-micro-label">Pro Monat (Netto)</div>
             <div class="goal-micro-val pos" id="gm-monthly">–</div>
-            <div class="goal-micro-target">Ziel: 3.500 €</div>
+            <div class="goal-micro-target" id="gm-target-monthly">Ziel: 3.500 €</div>
           </div>
           <div class="goal-micro-item">
             <div class="goal-micro-label">Pro Woche (Netto)</div>
             <div class="goal-micro-val" id="gm-weekly">–</div>
-            <div class="goal-micro-target">Ziel: 808 €</div>
+            <div class="goal-micro-target" id="gm-target-weekly">Ziel: 808 €</div>
           </div>
           <div class="goal-micro-item">
             <div class="goal-micro-label">Pro Tag (Netto)</div>
             <div class="goal-micro-val" id="gm-daily">–</div>
-            <div class="goal-micro-target">Ziel: 115 €</div>
+            <div class="goal-micro-target" id="gm-target-daily">Ziel: 115 €</div>
           </div>
           <div class="goal-micro-item">
             <div class="goal-micro-label">Nächster Meilenstein in</div>
@@ -795,7 +820,7 @@
               <th>Netto Simulation</th>
               <th>Differenz</th>
               <th>Kum. investiert</th>
-              <th>Ziel (42k)</th>
+              <th id="sim-goal-th">Ziel</th>
             </tr></thead>
             <tbody id="sim-tbody"></tbody>
           </table>
@@ -924,7 +949,7 @@
 
 <script>
 // ── Constants ──────────────────────────────────────────────────────────
-const GOAL = 42000;
+let GOAL = +localStorage.getItem('div_goal') || 42000;
 const TAX  = 0.26375;
 const STORAGE_KEY = 'div_portfolio_csv';
 const MONTHS_DE = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
@@ -1117,15 +1142,20 @@ function renderKPIs(held) {
 }
 
 // ── Render Goal ───────────────────────────────────────────────────────
-const MILESTONES = [
-  { amount: 6000,  title: 'Erster Schritt',       desc: 'Rechnungen & Abos gedeckt',  icon: '💡' },
-  { amount: 12000, title: 'Basis-Sicherheit',      desc: 'Grundlebenshaltungskosten',   icon: '🏠' },
-  { amount: 18000, title: 'Solides Einkommen',     desc: '1.500 € monatlich',           icon: '📈' },
-  { amount: 24000, title: 'Halbzeit!',             desc: '2.000 € monatlich',           icon: '🎯' },
-  { amount: 30000, title: 'Komfortzone',           desc: '2.500 € monatlich',           icon: '✨' },
-  { amount: 36000, title: 'Finanzielle Freiheit',  desc: '3.000 € monatlich',           icon: '🚀' },
-  { amount: 42000, title: 'Ziel erreicht!',        desc: '3.500 € monatlich – Fertig!', icon: '🏆' },
-];
+function buildMilestones() {
+  const icons  = ['💡','🏠','📈','🎯','✨','🚀','🏆'];
+  const titles = ['Erster Schritt','Basis-Sicherheit','Solides Einkommen','Halbzeit!','Komfortzone','Finanzielle Freiheit','Ziel erreicht!'];
+  return icons.map((icon, i) => {
+    const amount  = Math.round(GOAL * (i + 1) / icons.length);
+    const monthly = Math.round(amount / 12);
+    const last    = i === icons.length - 1;
+    const desc    = i === 0 ? 'Rechnungen & Abos gedeckt'
+                  : i === 1 ? 'Grundlebenshaltungskosten'
+                  : fmtEur(monthly, 0) + '/Monat' + (last ? ' – Fertig!' : '');
+    return { amount, title: titles[i], desc, icon };
+  });
+}
+let MILESTONES = buildMilestones();
 
 let goalChartInst = null;
 function renderGoal(grossDiv, netDiv) {
@@ -1133,6 +1163,8 @@ function renderGoal(grossDiv, netDiv) {
   const pctDisp = Math.min(netDiv / GOAL * 100, 100);
   const missing = Math.max(GOAL - netDiv, 0);
 
+  document.getElementById('goal-ring-label').textContent = 'von ' + fmtEur(GOAL, 0);
+  document.getElementById('goal-title').textContent = 'Ziel: ' + fmtEur(GOAL, 0) + ' jährliche Netto-Dividenden';
   document.getElementById('goal-pct-txt').textContent  = Math.round(pctDisp) + '%';
   document.getElementById('gbar-net-val').textContent   = fmtEur(netDiv, 0);
   document.getElementById('gbar-gross-val').textContent = fmtEur(grossDiv, 0);
@@ -1140,10 +1172,12 @@ function renderGoal(grossDiv, netDiv) {
   document.getElementById('gbar-gross').style.width = Math.min(grossDiv / GOAL * 100, 100) + '%';
   document.getElementById('goal-missing').textContent = fmtEur(missing, 0);
 
-  // Micro breakdown
   document.getElementById('gm-monthly').textContent = fmtEur(netDiv / 12, 0);
   document.getElementById('gm-weekly').textContent  = fmtEur(netDiv / 52, 0);
   document.getElementById('gm-daily').textContent   = fmtEur(netDiv / 365, 0);
+  document.getElementById('gm-target-monthly').textContent = 'Ziel: ' + fmtEur(GOAL / 12, 0);
+  document.getElementById('gm-target-weekly').textContent  = 'Ziel: ' + fmtEur(GOAL / 52, 0);
+  document.getElementById('gm-target-daily').textContent   = 'Ziel: ' + fmtEur(GOAL / 365, 0);
 
   // Next milestone
   const nextMs = MILESTONES.find(ms => netDiv < ms.amount);
@@ -1345,7 +1379,7 @@ function renderWachstum(held) {
     data: { labels: yearLabels, datasets: [
       { label: 'Netto', data: netPath, borderColor:'#3fb950', backgroundColor:'rgba(63,185,80,.08)', fill:true, tension:.35, pointRadius:4, pointHoverRadius:6 },
       { label: 'Brutto', data: grossPath, borderColor:'#58a6ff', backgroundColor:'transparent', tension:.35, pointRadius:3 },
-      { label: 'Ziel 42.000 €', data: Array(PROJECTION_YEARS + 1).fill(GOAL), borderColor:'rgba(240,136,62,.7)', borderDash:[6,4], pointRadius:0, borderWidth:2 }
+      { label: 'Ziel ' + fmtEur(GOAL, 0), data: Array(PROJECTION_YEARS + 1).fill(GOAL), borderColor:'rgba(240,136,62,.7)', borderDash:[6,4], pointRadius:0, borderWidth:2 }
     ]},
     options: {
       responsive:true, maintainAspectRatio:true,
@@ -1408,6 +1442,47 @@ function simulate(grossDiv, avgCagr, monthly, newYield, newCagr, reinvest, years
   return { base, sim };
 }
 
+// ── Goal edit ─────────────────────────────────────────────────────────
+let _lastRows = null, _lastFilename = '';
+
+function setupGoalEdit() {
+  const editBtn   = document.getElementById('goal-edit-btn');
+  const editForm  = document.getElementById('goal-edit-form');
+  const editInput = document.getElementById('goal-edit-input');
+  const saveBtn   = document.getElementById('goal-save-btn');
+  const cancelBtn = document.getElementById('goal-cancel-btn');
+
+  editBtn.addEventListener('click', () => {
+    editInput.value = GOAL;
+    editForm.style.display = 'flex';
+    editBtn.style.display  = 'none';
+    editInput.focus();
+    editInput.select();
+  });
+
+  const cancel = () => {
+    editForm.style.display = 'none';
+    editBtn.style.display  = '';
+  };
+
+  const save = () => {
+    const v = Math.round(+editInput.value);
+    if (!v || v < 1000) return;
+    GOAL = v;
+    try { localStorage.setItem('div_goal', GOAL); } catch(_) {}
+    MILESTONES = buildMilestones();
+    cancel();
+    if (_lastRows) renderAll(_lastRows, _lastFilename);
+  };
+
+  saveBtn.addEventListener('click', save);
+  cancelBtn.addEventListener('click', cancel);
+  editInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') save();
+    if (e.key === 'Escape') cancel();
+  });
+}
+
 // ── Render / Update Simulation Tab ───────────────────────────────────
 let _simHeld = [], _simReinvest = false;
 
@@ -1418,6 +1493,7 @@ function renderSimulation(held) {
 
 function runSimulation() {
   if (!_simHeld.length) return;
+  document.getElementById('sim-goal-th').textContent = 'Ziel (' + fmtEur(GOAL, 0) + ')';
   const held     = _simHeld;
   const monthly  = +document.getElementById('sim-monthly').value;
   const yieldR   = +document.getElementById('sim-yield').value / 1000;  // 40 → 0.04
@@ -1482,7 +1558,7 @@ function runSimulation() {
         data: base.map(r => Math.round(r.net)),
         borderColor: '#58a6ff', backgroundColor: 'transparent',
         tension: .35, pointRadius: 3, borderDash: [5,3] },
-      { label: 'Ziel 42.000 €',
+      { label: 'Ziel ' + fmtEur(GOAL, 0),
         data: Array(YEARS+1).fill(GOAL),
         borderColor: 'rgba(240,136,62,.75)', borderDash: [7,4],
         pointRadius: 0, borderWidth: 2 }
@@ -1626,7 +1702,7 @@ function renderFreiheit() {
   const fireNumber = GOAL / (1 - TAX) / FIRE_SWR;  // gross needed for 42k net at 4%
   const firePct    = Math.min(totalVal / fireNumber * 100, 100);
   document.getElementById('fire-numbers').innerHTML = `
-    <div><div class="fire-label">FIRE-Zahl (4%-Regel für 42k Netto)</div><div class="fire-val">${fmtEur(fireNumber, 0)}</div></div>
+    <div><div class="fire-label">FIRE-Zahl (4%-Regel für ${fmtEur(GOAL, 0)} Netto)</div><div class="fire-val">${fmtEur(fireNumber, 0)}</div></div>
     <div><div class="fire-label">Dein aktueller Depotwert</div><div class="fire-val neu">${fmtEur(totalVal, 0)}</div></div>
     <div><div class="fire-label">Fehlend bis FIRE-Zahl</div><div class="fire-val ${totalVal >= fireNumber ? 'pos' : ''}">${fmtEur(Math.max(fireNumber - totalVal, 0), 0)}</div></div>
     <div><div class="fire-label">FIRE-Fortschritt</div><div class="fire-val ${firePct >= 100 ? 'pos' : ''}">${firePct.toFixed(1)}%</div></div>`;
@@ -1919,6 +1995,8 @@ function setupTableSort() {
 
 // ── Main render ───────────────────────────────────────────────────────
 function renderAll(rows, filename) {
+  _lastRows = rows;
+  if (filename) _lastFilename = filename;
   destroyAllCharts();
   const held = rows.filter(h => h.quantity > 0);
   _stats = renderKPIs(held);
@@ -1987,6 +2065,7 @@ document.getElementById('file-input-2').addEventListener('change', e => handleFi
 // Table sort setup
 setupTableSort();
 setupSimulation();
+setupGoalEdit();
 
 // ── Auto-load from localStorage ───────────────────────────────────────
 try {
