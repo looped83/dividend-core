@@ -975,13 +975,6 @@ function forEachPaymentMonth(h, cb) {
   }
 }
 
-// ── Monthly income projection ─────────────────────────────────────────
-function monthlyIncome(holdings) {
-  const months = new Array(12).fill(0);
-  holdings.forEach(h => forEachPaymentMonth(h, (m, amt) => { months[m] += amt; }));
-  return months;
-}
-
 // ── Aggregate by key ──────────────────────────────────────────────────
 function groupBy(holdings, key, valueKey) {
   const map = {};
@@ -1035,6 +1028,7 @@ const PALETTE = [
 const CHART_TEXT = { color: '#8b949e', font: { size: 11 } };
 const CHART_GRID = { color: '#21262d' };
 const FREQ_LABELS = { monthly: 'Monatlich', quarterly: 'Quartalsweise', annually: 'Jährlich', biannually: 'Halbjährlich', none: 'Keine' };
+const PROJECTION_YEARS = 12;
 let _stats = {};
 
 function destroyChart(id) {
@@ -1043,10 +1037,10 @@ function destroyChart(id) {
 }
 
 function destroyAllCharts() {
-  [...Object.values(Chart.instances)].forEach(c => c.destroy());
+  if (Chart.instances) Object.values(Chart.instances).forEach(c => c.destroy());
 }
 
-function doughnutChart(id, labels, data, title) {
+function doughnutChart(id, labels, data) {
   destroyChart(id);
   const ctx = document.getElementById(id).getContext('2d');
   return new Chart(ctx, {
@@ -1134,7 +1128,7 @@ const MILESTONES = [
 ];
 
 let goalChartInst = null;
-function renderGoal(grossDiv, netDiv, held) {
+function renderGoal(grossDiv, netDiv) {
   const pct     = Math.min(netDiv / GOAL, 1);
   const pctDisp = Math.min(netDiv / GOAL * 100, 100);
   const missing = Math.max(GOAL - netDiv, 0);
@@ -1245,7 +1239,7 @@ function renderUebersicht(held) {
 
 // ── Render Dividenden Tab ─────────────────────────────────────────────
 function renderDividenden(held) {
-  const gross = monthlyIncome(held);
+  const gross = _stats.breakdown.map(m => m.gross);
   const net   = gross.map(v => v * (1 - TAX));
 
   barChart('chart-monthly', MONTHS_DE, [
@@ -1339,19 +1333,19 @@ function renderWachstum(held) {
     { tooltipCb: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw.toFixed(2)} %` } }
   );
 
-  // Income path line chart (years 0–12)
-  const { grossDiv: totalGrossW, avgCagr: avgCagrW } = _stats;
+  // Income path line chart
+  const { grossDiv, avgCagr } = _stats;
   const _cy = new Date().getFullYear();
-  const yearLabels  = Array.from({length:13}, (_,i) => String(_cy + i));
-  const netPath     = yearLabels.map((_,i) => Math.round(totalGrossW * Math.pow(1+avgCagrW,i) * (1-TAX)));
-  const grossPath   = yearLabels.map((_,i) => Math.round(totalGrossW * Math.pow(1+avgCagrW,i)));
+  const yearLabels  = Array.from({length: PROJECTION_YEARS + 1}, (_,i) => String(_cy + i));
+  const netPath     = yearLabels.map((_,i) => Math.round(grossDiv * Math.pow(1+avgCagr,i) * (1-TAX)));
+  const grossPath   = yearLabels.map((_,i) => Math.round(grossDiv * Math.pow(1+avgCagr,i)));
   destroyChart('chart-income-path');
   new Chart(document.getElementById('chart-income-path').getContext('2d'), {
     type: 'line',
     data: { labels: yearLabels, datasets: [
       { label: 'Netto', data: netPath, borderColor:'#3fb950', backgroundColor:'rgba(63,185,80,.08)', fill:true, tension:.35, pointRadius:4, pointHoverRadius:6 },
       { label: 'Brutto', data: grossPath, borderColor:'#58a6ff', backgroundColor:'transparent', tension:.35, pointRadius:3 },
-      { label: 'Ziel 42.000 €', data: Array(13).fill(GOAL), borderColor:'rgba(240,136,62,.7)', borderDash:[6,4], pointRadius:0, borderWidth:2 }
+      { label: 'Ziel 42.000 €', data: Array(PROJECTION_YEARS + 1).fill(GOAL), borderColor:'rgba(240,136,62,.7)', borderDash:[6,4], pointRadius:0, borderWidth:2 }
     ]},
     options: {
       responsive:true, maintainAspectRatio:true,
@@ -1367,18 +1361,16 @@ function renderWachstum(held) {
   });
 
   // Projection table
-  const { grossDiv: totalGross, avgCagr } = _stats;
-
   const tbody = document.getElementById('projection-body');
   tbody.innerHTML = '';
   for (let y = 0; y <= 10; y++) {
-    const g = totalGross * Math.pow(1 + avgCagr, y);
+    const g = grossDiv * Math.pow(1 + avgCagr, y);
     const n = g * (1 - TAX);
     const pct = Math.min(n / GOAL * 100, 999);
     const growth = y === 0 ? '–' : '+' + ((Math.pow(1 + avgCagr, y) - 1) * 100).toFixed(0) + '%';
     const barW = Math.min(pct, 100).toFixed(0);
     tbody.innerHTML += `<tr>
-      <td><strong>${new Date().getFullYear() + y}</strong></td>
+      <td><strong>${_cy + y}</strong></td>
       <td>${fmtEur(g, 0)}</td>
       <td class="${n >= GOAL ? 'pos' : ''}">${fmtEur(n, 0)}</td>
       <td>
@@ -1556,7 +1548,7 @@ const AVG_NETTO      = 26400;         // ~2,200 €/mo average German net salary
 const AVG_MIETE      = 9600;          // ~800 €/mo avg rent including utilities
 const FIRE_SWR       = 0.04;          // 4% safe withdrawal rate
 
-function renderFreiheit(held) {
+function renderFreiheit() {
   const { grossDiv, netDiv, totalVal, totalInv } = _stats;
 
   const perHour   = netDiv / (365 * 24);
@@ -1644,7 +1636,7 @@ function renderFreiheit(held) {
 
 // ── Render Kalender Tab ───────────────────────────────────────────────
 function renderKalender(held) {
-  const bd    = monthlyBreakdown(held);
+  const bd    = _stats.breakdown;
   const maxG  = Math.max(...bd.map(m => m.gross));
   const minG  = Math.min(...bd.filter(m => m.gross > 0).map(m => m.gross));
   const sumG  = bd.reduce((s,m) => s + m.gross, 0);
@@ -1930,14 +1922,15 @@ function renderAll(rows, filename) {
   destroyAllCharts();
   const held = rows.filter(h => h.quantity > 0);
   _stats = renderKPIs(held);
+  _stats.breakdown = monthlyBreakdown(held);
   const { grossDiv, netDiv } = _stats;
-  renderGoal(grossDiv, netDiv, held);
+  renderGoal(grossDiv, netDiv);
   renderUebersicht(held);
   renderDividenden(held);
   renderWachstum(held);
   renderMeilensteine(held);
   renderSimulation(held);
-  renderFreiheit(held);
+  renderFreiheit();
   renderKalender(held);
   renderAnalyse(held);
   renderPositions(rows);
