@@ -97,12 +97,6 @@ Always conduct your own research before making investment decisions.
 
 ---
 
-## License
-
-MIT License
-
----
-
 ## Author
 
 Created by looped83
