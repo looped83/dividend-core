@@ -518,46 +518,66 @@
     .cal-gross  { font-size: 1.1rem; font-weight: 800; }
     .cal-net    { font-size: 11px; color: var(--green); margin-bottom: 6px; }
     .cal-payers { font-size: 10px; color: var(--txt2); line-height: 1.6; }
+
+    /* ── Accessibility helpers ───────────────────────────────────────── */
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+    .skip-link {
+      position: absolute; left: -9999px; top: 0; z-index: 10000;
+      padding: 8px 16px; background: var(--blue); color: #000;
+      font-weight: 700; border-radius: 0 0 6px 0; text-decoration: none;
+    }
+    .skip-link:focus { left: 0; }
+    :focus-visible {
+      outline: 2px solid var(--blue);
+      outline-offset: 2px;
+      border-radius: 3px;
+    }
+    .tab-btn:focus-visible { border-radius: 4px 4px 0 0; }
   </style>
 </head>
 <body>
+<a href="#main-content" class="skip-link">Zum Hauptinhalt springen</a>
 
 <!-- ── Upload Screen ─────────────────────────────────────────────────── -->
 <div id="upload-screen">
   <div style="text-align:center;">
-    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px" aria-hidden="true">
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
     </svg>
     <h1>Dividend Core</h1>
     <p style="margin-top:8px;">Lade deine CSV-Datei hoch, um dein Portfolio zu analysieren.</p>
   </div>
-  <div id="drop-zone">
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#8b949e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <div id="drop-zone" role="button" tabindex="0" aria-label="CSV-Datei hochladen – hierher ziehen oder klicken">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#8b949e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
       <polyline points="17 8 12 3 7 8"/>
       <line x1="12" y1="3" x2="12" y2="15"/>
     </svg>
     <p style="font-size:1rem;color:#e6edf3;margin-top:12px;">CSV hierher ziehen oder klicken</p>
   </div>
-  <input type="file" id="file-input" accept=".csv">
+  <input type="file" id="file-input" accept=".csv" aria-label="CSV-Datei auswählen">
 </div>
 
 <!-- ── Dashboard ─────────────────────────────────────────────────────── -->
 <div id="dashboard">
   <header>
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
     </svg>
     <h1>Dividend Core</h1>
-    <span class="header-meta" id="last-updated"></span>
+    <span class="header-meta" id="last-updated" aria-live="polite"></span>
     <button class="btn" id="upload-new">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       CSV aktualisieren
     </button>
-    <input type="file" id="file-input-2" accept=".csv" style="display:none">
+    <input type="file" id="file-input-2" accept=".csv" style="display:none" aria-label="CSV-Datei aktualisieren">
   </header>
 
-  <div class="main">
+  <div class="main" id="main-content">
 
     <!-- KPI Cards -->
     <div class="kpi-grid">
@@ -591,7 +611,7 @@
     <!-- Goal Section -->
     <div class="goal-section">
       <div class="goal-ring-wrap">
-        <canvas id="goal-chart"></canvas>
+        <canvas id="goal-chart" role="img" aria-label="Zielfortschritt in Prozent"></canvas>
         <div class="goal-ring-center">
           <div class="goal-pct" id="goal-pct-txt">0%</div>
           <div class="goal-pct-label" id="goal-ring-label">von 42.000 €</div>
@@ -600,21 +620,21 @@
       <div class="goal-info">
         <div class="goal-edit-row">
           <h2 id="goal-title">Ziel: 42.000 € jährliche Netto-Dividenden</h2>
-          <button class="goal-edit-btn" id="goal-edit-btn" title="Ziel bearbeiten">✏️</button>
+          <button class="goal-edit-btn" id="goal-edit-btn" aria-label="Ziel bearbeiten">✏️</button>
         </div>
-        <div class="goal-edit-form" id="goal-edit-form" style="display:none">
-          <input type="number" class="goal-edit-input" id="goal-edit-input" min="1000" step="500">
-          <button class="btn btn-primary" id="goal-save-btn" style="padding:5px 12px">✓</button>
-          <button class="btn" id="goal-cancel-btn" style="padding:5px 12px">✗</button>
+        <div class="goal-edit-form" id="goal-edit-form" style="display:none" role="group" aria-label="Ziel bearbeiten">
+          <input type="number" class="goal-edit-input" id="goal-edit-input" min="1000" step="500" aria-label="Jahreszieldividende in Euro">
+          <button class="btn btn-primary" id="goal-save-btn" aria-label="Ziel speichern" style="padding:5px 12px">✓</button>
+          <button class="btn" id="goal-cancel-btn" aria-label="Abbrechen" style="padding:5px 12px">✗</button>
         </div>
         <div class="goal-bars">
           <div class="goal-bar-item">
             <label><span>Netto-Dividenden</span><span id="gbar-net-val">0 €</span></label>
-            <div class="bar-track"><div class="bar-fill bar-green" id="gbar-net" style="width:0%"></div></div>
+            <div class="bar-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Netto-Dividenden Fortschritt"><div class="bar-fill bar-green" id="gbar-net" style="width:0%"></div></div>
           </div>
           <div class="goal-bar-item">
             <label><span>Brutto-Dividenden</span><span id="gbar-gross-val">0 €</span></label>
-            <div class="bar-track"><div class="bar-fill bar-blue" id="gbar-gross" style="width:0%"></div></div>
+            <div class="bar-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Brutto-Dividenden Fortschritt"><div class="bar-fill bar-blue" id="gbar-gross" style="width:0%"></div></div>
           </div>
         </div>
         <div class="goal-remaining">
@@ -647,32 +667,32 @@
     </div>
 
     <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="uebersicht">Übersicht</button>
-      <button class="tab-btn" data-tab="dividenden">Dividenden</button>
-      <button class="tab-btn" data-tab="kalender">Kalender</button>
-      <button class="tab-btn" data-tab="analyse">Analyse</button>
-      <button class="tab-btn" data-tab="wachstum">Wachstum</button>
-      <button class="tab-btn" data-tab="positionen">Positionen</button>
-      <button class="tab-btn" data-tab="meilensteine">Meilensteine</button>
-      <button class="tab-btn" data-tab="freiheit">Freiheit</button>
-      <button class="tab-btn" data-tab="simulation">Simulation</button>
+    <div class="tabs" role="tablist" aria-label="Dashboard-Bereiche">
+      <button class="tab-btn active" data-tab="uebersicht" role="tab" aria-selected="true" aria-controls="tab-uebersicht" id="tab-btn-uebersicht">Übersicht</button>
+      <button class="tab-btn" data-tab="dividenden" role="tab" aria-selected="false" aria-controls="tab-dividenden" id="tab-btn-dividenden">Dividenden</button>
+      <button class="tab-btn" data-tab="kalender" role="tab" aria-selected="false" aria-controls="tab-kalender" id="tab-btn-kalender">Kalender</button>
+      <button class="tab-btn" data-tab="analyse" role="tab" aria-selected="false" aria-controls="tab-analyse" id="tab-btn-analyse">Analyse</button>
+      <button class="tab-btn" data-tab="wachstum" role="tab" aria-selected="false" aria-controls="tab-wachstum" id="tab-btn-wachstum">Wachstum</button>
+      <button class="tab-btn" data-tab="positionen" role="tab" aria-selected="false" aria-controls="tab-positionen" id="tab-btn-positionen">Positionen</button>
+      <button class="tab-btn" data-tab="meilensteine" role="tab" aria-selected="false" aria-controls="tab-meilensteine" id="tab-btn-meilensteine">Meilensteine</button>
+      <button class="tab-btn" data-tab="freiheit" role="tab" aria-selected="false" aria-controls="tab-freiheit" id="tab-btn-freiheit">Freiheit</button>
+      <button class="tab-btn" data-tab="simulation" role="tab" aria-selected="false" aria-controls="tab-simulation" id="tab-btn-simulation">Simulation</button>
     </div>
 
     <!-- Tab: Übersicht -->
-    <div class="tab-panel active" id="tab-uebersicht">
+    <div class="tab-panel active" id="tab-uebersicht" role="tabpanel" aria-labelledby="tab-btn-uebersicht" tabindex="0">
       <div class="chart-grid">
         <div class="chart-card">
           <h3>Sektorallokation (nach Dividende)</h3>
-          <canvas id="chart-sector"></canvas>
+          <canvas id="chart-sector" role="img" aria-label="Sektorallokation nach Dividende"></canvas>
         </div>
         <div class="chart-card">
           <h3>Asset-Klassen</h3>
-          <canvas id="chart-type"></canvas>
+          <canvas id="chart-type" role="img" aria-label="Verteilung nach Asset-Klassen"></canvas>
         </div>
         <div class="chart-card">
           <h3>Länderallokation</h3>
-          <canvas id="chart-country"></canvas>
+          <canvas id="chart-country" role="img" aria-label="Länderallokation nach Depotwert"></canvas>
         </div>
         <div class="chart-card">
           <h3>Top 10 Positionen nach Depotwert</h3>
@@ -690,49 +710,49 @@
     </div>
 
     <!-- Tab: Dividenden -->
-    <div class="tab-panel" id="tab-dividenden">
+    <div class="tab-panel" id="tab-dividenden" role="tabpanel" aria-labelledby="tab-btn-dividenden" tabindex="0">
       <div class="chart-grid">
         <div class="chart-card wide">
           <h3>Monatliche Dividendeneinnahmen (Projektion)</h3>
-          <canvas id="chart-monthly" style="max-height:300px"></canvas>
+          <canvas id="chart-monthly" style="max-height:300px" role="img" aria-label="Monatliche Dividendeneinnahmen Brutto und Netto"></canvas>
         </div>
         <div class="chart-card">
           <h3>Zahlungsrhythmus</h3>
-          <canvas id="chart-freq"></canvas>
+          <canvas id="chart-freq" role="img" aria-label="Dividenden nach Zahlungsrhythmus"></canvas>
         </div>
         <div class="chart-card">
           <h3>Dividenden nach Asset-Klasse</h3>
-          <canvas id="chart-div-type"></canvas>
+          <canvas id="chart-div-type" role="img" aria-label="Dividenden nach Asset-Klasse"></canvas>
         </div>
         <div class="chart-card">
           <h3>Dividenden nach Herkunftsland</h3>
-          <canvas id="chart-div-country"></canvas>
+          <canvas id="chart-div-country" role="img" aria-label="Dividenden nach Herkunftsland"></canvas>
         </div>
       </div>
       <div class="chart-card wide">
         <h3>Monatliches Einkommen nach Sektor (gestapelt)</h3>
-        <canvas id="chart-monthly-sector" style="max-height:320px"></canvas>
+        <canvas id="chart-monthly-sector" style="max-height:320px" role="img" aria-label="Monatliches Einkommen aufgeschlüsselt nach Sektor"></canvas>
       </div>
     </div>
 
     <!-- Tab: Wachstum -->
-    <div class="tab-panel" id="tab-wachstum">
+    <div class="tab-panel" id="tab-wachstum" role="tabpanel" aria-labelledby="tab-btn-wachstum" tabindex="0">
       <div class="chart-grid">
         <div class="chart-card wide">
           <h3>Dividenden CAGR – Top 20 Positionen (5 Jahre)</h3>
-          <canvas id="chart-cagr" style="max-height:340px"></canvas>
+          <canvas id="chart-cagr" style="max-height:340px" role="img" aria-label="Dividenden CAGR Top 20 Positionen"></canvas>
         </div>
         <div class="chart-card">
           <h3>CAGR-Verteilung</h3>
-          <canvas id="chart-cagr-dist"></canvas>
+          <canvas id="chart-cagr-dist" role="img" aria-label="Verteilung der Dividenden CAGR"></canvas>
         </div>
         <div class="chart-card">
           <h3>Yield vs. Yield-on-Cost</h3>
-          <canvas id="chart-yoc"></canvas>
+          <canvas id="chart-yoc" role="img" aria-label="Vergleich aktueller Yield mit Yield-on-Cost"></canvas>
         </div>
         <div class="chart-card">
           <h3>Einkommenspfad – Netto-Projektion mit Zielgerade</h3>
-          <canvas id="chart-income-path"></canvas>
+          <canvas id="chart-income-path" role="img" aria-label="Einkommenspfad Netto-Projektion mit Zielgerade"></canvas>
         </div>
       </div>
       <div class="chart-card">
@@ -753,16 +773,16 @@
     </div>
 
     <!-- Tab: Meilensteine -->
-    <div class="tab-panel" id="tab-meilensteine">
+    <div class="tab-panel" id="tab-meilensteine" role="tabpanel" aria-labelledby="tab-btn-meilensteine" tabindex="0">
       <div class="milestone-grid" id="milestone-grid"></div>
       <div class="chart-card">
         <h3>Meilensteinpfad – Netto-Dividenden vs. Zielwerte</h3>
-        <canvas id="chart-milestone-path" style="max-height:280px"></canvas>
+        <canvas id="chart-milestone-path" style="max-height:280px" role="img" aria-label="Meilensteinpfad Netto-Dividenden vs. Zielwerte"></canvas>
       </div>
     </div>
 
     <!-- Tab: Simulation -->
-    <div class="tab-panel" id="tab-simulation">
+    <div class="tab-panel" id="tab-simulation" role="tabpanel" aria-labelledby="tab-btn-simulation" tabindex="0">
 
       <!-- Controls -->
       <div class="sim-controls">
@@ -771,7 +791,7 @@
             <span class="sim-ctrl-label">Monatliche Zusatzinvestition</span>
             <span class="sim-val" id="sim-monthly-val">500 €</span>
           </div>
-          <input type="range" id="sim-monthly" min="0" max="5000" step="100" value="500">
+          <input type="range" id="sim-monthly" min="0" max="5000" step="100" value="500" aria-label="Monatliche Zusatzinvestition in Euro">
           <div class="range-limits"><span>0 €</span><span>5.000 €</span></div>
         </div>
         <div>
@@ -779,7 +799,7 @@
             <span class="sim-ctrl-label">Dividendenrendite (Neuinvest.)</span>
             <span class="sim-val" id="sim-yield-val">4,0 %</span>
           </div>
-          <input type="range" id="sim-yield" min="10" max="80" step="1" value="40">
+          <input type="range" id="sim-yield" min="10" max="80" step="1" value="40" aria-label="Dividendenrendite für Neuinvestitionen">
           <div class="range-limits"><span>1 %</span><span>8 %</span></div>
         </div>
         <div>
@@ -787,15 +807,17 @@
             <span class="sim-ctrl-label">Div.-CAGR Neuinvest.</span>
             <span class="sim-val" id="sim-cagr-val">5,0 %</span>
           </div>
-          <input type="range" id="sim-cagr" min="0" max="150" step="1" value="50">
+          <input type="range" id="sim-cagr" min="0" max="150" step="1" value="50" aria-label="Dividenden-CAGR für Neuinvestitionen">
           <div class="range-limits"><span>0 %</span><span>15 %</span></div>
         </div>
         <div style="display:flex;flex-direction:column;justify-content:flex-end;gap:10px">
-          <span class="sim-ctrl-label">Netto-Dividenden reinvestieren</span>
-          <label class="sim-toggle-row" id="sim-reinvest-toggle" style="margin-bottom:2px">
+          <span class="sim-ctrl-label" id="reinvest-label-txt">Netto-Dividenden reinvestieren</span>
+          <button type="button" class="sim-toggle-row" id="sim-reinvest-toggle"
+            role="switch" aria-checked="false" aria-labelledby="reinvest-label-txt"
+            style="margin-bottom:2px;background:none;border:none;cursor:pointer;text-align:left;padding:0;color:inherit;font-family:inherit;">
             <div class="toggle-track" id="sim-reinvest-track"><div class="toggle-thumb"></div></div>
             <span id="sim-reinvest-label" style="font-size:13px;font-weight:500">Aus</span>
-          </label>
+          </button>
         </div>
       </div>
 
@@ -805,7 +827,7 @@
       <!-- Chart -->
       <div class="chart-card" style="margin-bottom:16px">
         <h3>Netto-Dividenden Projektion – 20 Jahre</h3>
-        <canvas id="chart-simulation" style="max-height:380px"></canvas>
+        <canvas id="chart-simulation" style="max-height:380px" role="img" aria-label="Netto-Dividenden Projektion über 20 Jahre"></canvas>
       </div>
 
       <!-- Year table -->
@@ -828,12 +850,12 @@
     </div>
 
     <!-- Tab: Freiheit -->
-    <div class="tab-panel" id="tab-freiheit">
+    <div class="tab-panel" id="tab-freiheit" role="tabpanel" aria-labelledby="tab-btn-freiheit" tabindex="0">
       <div class="freedom-grid" id="freedom-metrics"></div>
       <div class="compare-grid">
         <div class="chart-card">
           <h3>Einkommensvergleich</h3>
-          <canvas id="chart-income-compare" style="max-height:300px"></canvas>
+          <canvas id="chart-income-compare" style="max-height:300px" role="img" aria-label="Einkommensvergleich Tagesgeld vs. Dividenden vs. Ziel vs. Durchschnittsgehalt"></canvas>
         </div>
         <div class="chart-card">
           <h3>Was deine Dividenden bedeuten</h3>
@@ -851,26 +873,26 @@
     </div>
 
     <!-- Tab: Kalender -->
-    <div class="tab-panel" id="tab-kalender">
+    <div class="tab-panel" id="tab-kalender" role="tabpanel" aria-labelledby="tab-btn-kalender" tabindex="0">
       <div class="cal-summary" id="cal-summary"></div>
       <div class="cal-grid" id="cal-grid"></div>
     </div>
 
     <!-- Tab: Analyse -->
-    <div class="tab-panel" id="tab-analyse">
+    <div class="tab-panel" id="tab-analyse" role="tabpanel" aria-labelledby="tab-btn-analyse" tabindex="0">
       <div class="metric-grid" id="analyse-metrics"></div>
       <div class="chart-grid">
         <div class="chart-card">
           <h3>Dividenden nach Währung</h3>
-          <canvas id="chart-currency"></canvas>
+          <canvas id="chart-currency" role="img" aria-label="Dividenden nach Währung"></canvas>
         </div>
         <div class="chart-card">
           <h3>Yield-Verteilung der Positionen</h3>
-          <canvas id="chart-yield-dist"></canvas>
+          <canvas id="chart-yield-dist" role="img" aria-label="Yield-Verteilung der Positionen"></canvas>
         </div>
         <div class="chart-card">
           <h3>Dividendenkonzentration – Top 10</h3>
-          <canvas id="chart-div-conc"></canvas>
+          <canvas id="chart-div-conc" role="img" aria-label="Dividendenkonzentration Top 10 Positionen"></canvas>
         </div>
       </div>
       <div class="chart-grid">
@@ -905,10 +927,12 @@
     </div>
 
     <!-- Tab: Positionen -->
-    <div class="tab-panel" id="tab-positionen">
+    <div class="tab-panel" id="tab-positionen" role="tabpanel" aria-labelledby="tab-btn-positionen" tabindex="0">
       <div class="table-header">
         <h3>Alle Positionen</h3>
+        <label for="pos-search" class="sr-only">Positionen durchsuchen</label>
         <input class="search-box" id="pos-search" placeholder="Suchen…">
+        <label for="pos-filter-type" class="sr-only">Nach Asset-Typ filtern</label>
         <select class="filter-select" id="pos-filter-type">
           <option value="">Alle Typen</option>
           <option value="EQUITY">Aktien</option>
@@ -916,6 +940,7 @@
           <option value="CRYPTO">Krypto</option>
           <option value="FUND">Fonds</option>
         </select>
+        <label for="pos-filter-held" class="sr-only">Depotfilter</label>
         <select class="filter-select" id="pos-filter-held">
           <option value="held">Im Depot</option>
           <option value="all">Alle inkl. Watchlist</option>
@@ -925,17 +950,17 @@
         <table id="pos-table">
           <thead>
             <tr>
-              <th data-col="name">Name</th>
-              <th data-col="value">Wert</th>
-              <th data-col="buyinTotal">Investiert</th>
-              <th data-col="gain">Gewinn</th>
-              <th data-col="gainRel">G/V %</th>
-              <th data-col="totalDividendRate">Dividende/J.</th>
-              <th data-col="dividendYield">Yield</th>
-              <th data-col="dividendYieldOnBuyin">YoC</th>
-              <th data-col="dividendCagr">CAGR</th>
-              <th data-col="dividendFrequency">Freq.</th>
-              <th data-col="sector">Sektor</th>
+              <th data-col="name" scope="col">Name</th>
+              <th data-col="value" scope="col">Wert</th>
+              <th data-col="buyinTotal" scope="col">Investiert</th>
+              <th data-col="gain" scope="col">Gewinn</th>
+              <th data-col="gainRel" scope="col">G/V %</th>
+              <th data-col="totalDividendRate" scope="col">Dividende/J.</th>
+              <th data-col="dividendYield" scope="col">Yield</th>
+              <th data-col="dividendYieldOnBuyin" scope="col">YoC</th>
+              <th data-col="dividendCagr" scope="col">CAGR</th>
+              <th data-col="dividendFrequency" scope="col">Freq.</th>
+              <th data-col="sector" scope="col">Sektor</th>
             </tr>
           </thead>
           <tbody id="pos-tbody"></tbody>
@@ -953,10 +978,27 @@ const TAX  = 0.26375;
 const STORAGE_KEY = 'div_portfolio_csv';
 const MONTHS_DE = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
 
+// ── HTML escaping (XSS prevention for CSV-sourced content) ────────────
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ── Parse German number ───────────────────────────────────────────────
 function num(s) {
   if (!s || s === '' || s === '-') return 0;
-  return parseFloat(s.toString().replace(',', '.')) || 0;
+  let str = s.toString().trim();
+  if (str.includes(',') && str.includes('.')) {
+    // German format: 1.234,56 – strip thousand-separator dots, replace decimal comma
+    str = str.replace(/\./g, '').replace(',', '.');
+  } else {
+    str = str.replace(',', '.');
+  }
+  return parseFloat(str) || 0;
 }
 
 function fmtEur(n, decimals = 0) {
@@ -1167,8 +1209,12 @@ function renderGoal(grossDiv, netDiv) {
   document.getElementById('goal-pct-txt').textContent  = Math.round(pctDisp) + '%';
   document.getElementById('gbar-net-val').textContent   = fmtEur(netDiv, 0);
   document.getElementById('gbar-gross-val').textContent = fmtEur(grossDiv, 0);
-  document.getElementById('gbar-net').style.width   = Math.min(pct * 100, 100) + '%';
-  document.getElementById('gbar-gross').style.width = Math.min(grossDiv / GOAL * 100, 100) + '%';
+  const netPctVal   = Math.min(pct * 100, 100);
+  const grossPctVal = Math.min(grossDiv / GOAL * 100, 100);
+  document.getElementById('gbar-net').style.width   = netPctVal + '%';
+  document.getElementById('gbar-gross').style.width = grossPctVal + '%';
+  document.getElementById('gbar-net').closest('[role="progressbar"]').setAttribute('aria-valuenow', Math.round(netPctVal));
+  document.getElementById('gbar-gross').closest('[role="progressbar"]').setAttribute('aria-valuenow', Math.round(grossPctVal));
   document.getElementById('goal-missing').textContent = fmtEur(missing, 0);
 
   document.getElementById('gm-monthly').textContent = fmtEur(netDiv / 12, 0);
@@ -1183,7 +1229,7 @@ function renderGoal(grossDiv, netDiv) {
   if (nextMs) {
     document.getElementById('goal-next-ms').textContent = nextMs.title + ' (' + fmtEur(nextMs.amount, 0) + ')';
     const avgCagr = _stats.avgCagr;
-    if (avgCagr > 0) {
+    if (avgCagr > 0 && netDiv > 0) {
       const yrs = Math.log(nextMs.amount / netDiv) / Math.log(1 + avgCagr);
       const etaTxt = yrs < 1 ? '< 1 Jahr' : yrs < 1.5 ? '~1 Jahr' : `~${Math.round(yrs)} Jahre`;
       document.getElementById('gm-eta').textContent     = etaTxt;
@@ -1244,7 +1290,7 @@ function renderUebersicht(held) {
   document.getElementById('top-by-value').innerHTML = topVal.map((h, i) => `
     <div class="top-item">
       <span class="top-rank">${i+1}</span>
-      <div class="top-name">${h.name}<small>${h.symbol}</small></div>
+      <div class="top-name">${escHtml(h.name)}<small>${escHtml(h.symbol)}</small></div>
       <div class="top-val">${fmtEur(h.value, 0)}</div>
     </div>`).join('');
 
@@ -1253,7 +1299,7 @@ function renderUebersicht(held) {
   document.getElementById('top-by-div').innerHTML = topDiv.map((h, i) => `
     <div class="top-item">
       <span class="top-rank">${i+1}</span>
-      <div class="top-name">${h.name}<small>${h.symbol} &middot; ${fmtPct(h.dividendYield)}</small></div>
+      <div class="top-name">${escHtml(h.name)}<small>${escHtml(h.symbol)} &middot; ${fmtPct(h.dividendYield)}</small></div>
       <div class="top-val pos">${fmtEur(h.totalDividendRate, 0)}</div>
     </div>`).join('');
 
@@ -1264,7 +1310,7 @@ function renderUebersicht(held) {
     const yocGain = h.dividendYieldOnBuyin - h.dividendYield;
     return `<div class="top-item">
       <span class="top-rank">${i+1}</span>
-      <div class="top-name">${h.name}<small>${h.symbol} &middot; ${yocGain > 0.003 ? '↑ ' : ''}aktuell ${fmtPct(h.dividendYield)}</small></div>
+      <div class="top-name">${escHtml(h.name)}<small>${escHtml(h.symbol)} &middot; ${yocGain > 0.003 ? '↑ ' : ''}aktuell ${fmtPct(h.dividendYield)}</small></div>
       <div class="top-val ${yocGain > 0.003 ? 'pos' : ''}">${fmtPct(h.dividendYieldOnBuyin)}</div>
     </div>`;
   }).join('');
@@ -1611,6 +1657,7 @@ function setupSimulation() {
   });
   document.getElementById('sim-reinvest-toggle').addEventListener('click', () => {
     _simReinvest = !_simReinvest;
+    document.getElementById('sim-reinvest-toggle').setAttribute('aria-checked', _simReinvest ? 'true' : 'false');
     document.getElementById('sim-reinvest-track').classList.toggle('on', _simReinvest);
     document.getElementById('sim-reinvest-label').textContent = _simReinvest ? 'An' : 'Aus';
     runSimulation();
@@ -1627,7 +1674,6 @@ function renderFreiheit() {
   const { grossDiv, netDiv, totalVal, totalInv } = _stats;
 
   const perHour   = netDiv / (365 * 24);
-  const perSleep  = netDiv / (365 * 8);
   const freeHours = netDiv / (MINDESTLOHN / 2080);   // freed hours vs. min wage
   const pctGehalt = netDiv / AVG_NETTO * 100;
   const mieten    = netDiv / AVG_MIETE;
@@ -1643,7 +1689,7 @@ function renderFreiheit() {
     <div class="freedom-card">
       <span class="freedom-emoji">😴</span>
       <div class="freedom-label">Verdienst pro Schlafnacht (8h)</div>
-      <div class="freedom-value pos">${fmtEur(perSleep * 8, 2)}</div>
+      <div class="freedom-value pos">${fmtEur(perHour * 8, 2)}</div>
       <div class="freedom-sub">während du schläfst</div>
     </div>
     <div class="freedom-card">
@@ -1745,7 +1791,7 @@ function renderKalender(held) {
   document.getElementById('cal-grid').innerHTML = bd.map((m, i) => {
     const pct = maxG > 0 ? m.gross / maxG : 0;
     const cls = pct >= 0.8 ? 'cal-top' : pct >= 0.5 ? 'cal-high' : pct >= 0.2 ? 'cal-med' : 'cal-low';
-    const top3 = m.payers.slice(0,4).map(p => `${p.symbol} (${fmtEur(p.amount,0)})`).join(' · ');
+    const top3 = m.payers.slice(0,4).map(p => `${escHtml(p.symbol)} (${fmtEur(p.amount,0)})`).join(' · ');
     return `<div class="cal-month ${cls}">
       <div class="cal-name">${MONTHS_FULL[i]}</div>
       <div class="cal-gross">${fmtEur(m.gross, 0)}</div>
@@ -1766,7 +1812,7 @@ function renderMeilensteine(held) {
     const pct      = Math.min(netDiv / ms.amount * 100, 100);
     const remaining = Math.max(ms.amount - netDiv, 0);
     let etaHtml = '';
-    if (!achieved && avgCagr > 0) {
+    if (!achieved && avgCagr > 0 && netDiv > 0) {
       const yrs = Math.log(ms.amount / netDiv) / Math.log(1 + avgCagr);
       const eta = yrs < 1 ? 'In weniger als einem Jahr' : yrs < 1.5 ? 'In ca. 1 Jahr' : `In ca. ${Math.round(yrs)} Jahren`;
       etaHtml = `<div class="ms-eta">Noch <strong>${fmtEur(remaining, 0)}</strong> · ${eta}</div>`;
@@ -1893,7 +1939,7 @@ function renderAnalyse(held) {
   const worst = [...perfPos].sort((a,b) => a.gainRel - b.gainRel).slice(0,5);
 
   const perfRow = (h, cls) => `<tr>
-    <td><strong>${h.symbol}</strong><br><span style="font-size:11px;color:var(--txt2)">${h.name.substring(0,28)}</span></td>
+    <td><strong>${escHtml(h.symbol)}</strong><br><span style="font-size:11px;color:var(--txt2)">${escHtml(h.name.substring(0,28))}</span></td>
     <td class="${cls}">${cls==='pos'?'+':''}${fmtEur(h.gain,0)}</td>
     <td class="${cls}">${cls==='pos'?'+':''}${fmtPct(h.gainRel)}</td>
     <td class="${h.totalDividendRate>0?'pos':''}">${h.totalDividendRate>0?fmtEur(h.totalDividendRate,0):'–'}</td>
@@ -1914,7 +1960,7 @@ function renderAnalyse(held) {
         if (h.dividendCagr < -0.05) tags.push('<span class="risk-tag risk-high">CAGR &lt; −5%</span>');
         else if (h.dividendCagr < 0) tags.push('<span class="risk-tag risk-med">Neg. CAGR</span>');
         return `<tr>
-          <td><strong>${h.symbol}</strong> <span style="color:var(--txt2);font-size:11px">${h.name.substring(0,26)}</span></td>
+          <td><strong>${escHtml(h.symbol)}</strong> <span style="color:var(--txt2);font-size:11px">${escHtml(h.name.substring(0,26))}</span></td>
           <td>${fmtPct(h.dividendYield)}</td>
           <td class="${h.dividendCagr >= 0 ? 'pos' : 'neg'}">${(h.dividendCagr*100).toFixed(1)}%</td>
           <td class="${h.gainRel >= 0 ? 'pos' : 'neg'}">${(h.gainRel*100).toFixed(1)}%</td>
@@ -1960,8 +2006,8 @@ function applyFilter() {
     const badge = typeBadge[h.securityType] || 'badge-fund';
     return `<tr>
       <td class="td-name">
-        <strong>${h.name}</strong>
-        <span>${h.symbol} &middot; <span class="badge ${badge}">${h.securityType}</span></span>
+        <strong>${escHtml(h.name)}</strong>
+        <span>${escHtml(h.symbol)} &middot; <span class="badge ${badge}">${escHtml(h.securityType)}</span></span>
       </td>
       <td>${h.value > 0 ? fmtEur(h.value, 0) : '–'}</td>
       <td>${h.buyinTotal > 0 ? fmtEur(h.buyinTotal, 0) : '–'}</td>
@@ -1982,8 +2028,12 @@ function setupTableSort() {
     th.addEventListener('click', () => {
       const col = th.dataset.col;
       if (sortCol === col) sortDir *= -1; else { sortCol = col; sortDir = -1; }
-      document.querySelectorAll('#pos-table thead th').forEach(t => t.classList.remove('sort-asc','sort-desc'));
+      document.querySelectorAll('#pos-table thead th').forEach(t => {
+        t.classList.remove('sort-asc','sort-desc');
+        t.removeAttribute('aria-sort');
+      });
       th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+      th.setAttribute('aria-sort', sortDir === 1 ? 'ascending' : 'descending');
       applyFilter();
     });
   });
@@ -2024,10 +2074,25 @@ function renderAll(rows, filename) {
 // ── Tabs ──────────────────────────────────────────────────────────────
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected', 'false');
+      b.setAttribute('tabindex', '-1');
+    });
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
+    btn.setAttribute('aria-selected', 'true');
+    btn.setAttribute('tabindex', '0');
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+  // Arrow-key navigation within tablist
+  btn.addEventListener('keydown', e => {
+    const tabs = [...document.querySelectorAll('.tab-btn')];
+    const idx  = tabs.indexOf(btn);
+    if (e.key === 'ArrowRight') { e.preventDefault(); tabs[(idx + 1) % tabs.length].focus(); }
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); tabs[(idx - 1 + tabs.length) % tabs.length].focus(); }
+    if (e.key === 'Home') { e.preventDefault(); tabs[0].focus(); }
+    if (e.key === 'End')  { e.preventDefault(); tabs[tabs.length - 1].focus(); }
   });
 });
 
@@ -2049,6 +2114,9 @@ function handleFile(file) {
 // Drop zone
 const dropZone = document.getElementById('drop-zone');
 dropZone.addEventListener('click', () => document.getElementById('file-input').click());
+dropZone.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById('file-input').click(); }
+});
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
 dropZone.addEventListener('drop', e => {
