@@ -22,7 +22,6 @@
       --txt: #e6edf3;
       --txt2: #8b949e;
       --border: #30363d;
-      --goal: 42000;
     }
 
     body {
@@ -974,9 +973,18 @@
 <script>
 // ── Constants ──────────────────────────────────────────────────────────
 let GOAL = +localStorage.getItem('div_goal') || 42000;
-const TAX  = 0.26375;
+const TAX         = 0.26375;
 const STORAGE_KEY = 'div_portfolio_csv';
-const MONTHS_DE = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const CY          = new Date().getFullYear();
+const MONTHS_DE   = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const MONTHS_FULL = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const YOC_DELTA_THRESHOLD = 0.003;
+
+// ── Debounce helper ───────────────────────────────────────────────────
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
 
 // ── HTML escaping (XSS prevention for CSV-sourced content) ────────────
 function escHtml(s) {
@@ -1085,6 +1093,27 @@ function weightedAvgCagr(held) {
   return pos.reduce((s, h) => s + h.dividendCagr * h.totalDividendRate, 0) / totDiv;
 }
 
+// ── Lazy tab state ────────────────────────────────────────────────────
+const ALL_TABS = ['uebersicht','dividenden','kalender','analyse','wachstum','positionen','meilensteine','freiheit','simulation'];
+let _tabsNeedUpdate = new Set(ALL_TABS);
+let _heldCache = [];
+
+function renderTab(name) {
+  if (!_tabsNeedUpdate.has(name)) return;
+  _tabsNeedUpdate.delete(name);
+  switch (name) {
+    case 'uebersicht':   renderUebersicht(_heldCache); break;
+    case 'dividenden':   renderDividenden(_heldCache); break;
+    case 'kalender':     renderKalender(_heldCache); break;
+    case 'analyse':      renderAnalyse(_heldCache); break;
+    case 'wachstum':     renderWachstum(_heldCache); break;
+    case 'positionen':   renderPositions(_lastRows); break;
+    case 'meilensteine': renderMeilensteine(_heldCache); break;
+    case 'freiheit':     renderFreiheit(); break;
+    case 'simulation':   renderSimulation(_heldCache); break;
+  }
+}
+
 // ── Chart helpers ─────────────────────────────────────────────────────
 const PALETTE = [
   '#58a6ff','#3fb950','#bc8cff','#f0883e','#e3b341',
@@ -1108,8 +1137,8 @@ function destroyAllCharts() {
 
 function doughnutChart(id, labels, data) {
   destroyChart(id);
-  const ctx = document.getElementById(id).getContext('2d');
-  return new Chart(ctx, {
+  const tot = data.reduce((a, b) => a + b, 0);
+  return new Chart(document.getElementById(id).getContext('2d'), {
     type: 'doughnut',
     data: {
       labels,
@@ -1123,10 +1152,7 @@ function doughnutChart(id, labels, data) {
         legend: { position: 'right', labels: { ...CHART_TEXT, padding: 10, boxWidth: 12 } },
         tooltip: {
           callbacks: {
-            label: ctx => {
-              const tot = ctx.dataset.data.reduce((a, b) => a + b, 0);
-              return ` ${ctx.label}: ${fmtEur(ctx.raw)} (${(ctx.raw/tot*100).toFixed(1)}%)`;
-            }
+            label: c => ` ${c.label}: ${fmtEur(c.raw)} (${tot > 0 ? (c.raw / tot * 100).toFixed(1) : 0}%)`
           }
         }
       }
@@ -1136,8 +1162,7 @@ function doughnutChart(id, labels, data) {
 
 function barChart(id, labels, datasets, opts = {}) {
   destroyChart(id);
-  const ctx = document.getElementById(id).getContext('2d');
-  return new Chart(ctx, {
+  return new Chart(document.getElementById(id).getContext('2d'), {
     type: 'bar',
     data: { labels, datasets },
     options: {
@@ -1198,23 +1223,23 @@ function buildMilestones() {
 }
 let MILESTONES = buildMilestones();
 
-let goalChartInst = null;
 function renderGoal(grossDiv, netDiv) {
   const pct     = Math.min(netDiv / GOAL, 1);
-  const pctDisp = Math.min(netDiv / GOAL * 100, 100);
+  const pctPct  = pct * 100;                          // pct already capped at 1, so ≤ 100
+  const grossPctVal = Math.min(grossDiv / GOAL * 100, 100);
   const missing = Math.max(GOAL - netDiv, 0);
 
   document.getElementById('goal-ring-label').textContent = 'von ' + fmtEur(GOAL, 0);
   document.getElementById('goal-title').textContent = 'Ziel: ' + fmtEur(GOAL, 0) + ' jährliche Netto-Dividenden';
-  document.getElementById('goal-pct-txt').textContent  = Math.round(pctDisp) + '%';
+  document.getElementById('goal-pct-txt').textContent  = Math.round(pctPct) + '%';
   document.getElementById('gbar-net-val').textContent   = fmtEur(netDiv, 0);
   document.getElementById('gbar-gross-val').textContent = fmtEur(grossDiv, 0);
-  const netPctVal   = Math.min(pct * 100, 100);
-  const grossPctVal = Math.min(grossDiv / GOAL * 100, 100);
-  document.getElementById('gbar-net').style.width   = netPctVal + '%';
-  document.getElementById('gbar-gross').style.width = grossPctVal + '%';
-  document.getElementById('gbar-net').closest('[role="progressbar"]').setAttribute('aria-valuenow', Math.round(netPctVal));
-  document.getElementById('gbar-gross').closest('[role="progressbar"]').setAttribute('aria-valuenow', Math.round(grossPctVal));
+  const barNet   = document.getElementById('gbar-net');
+  const barGross = document.getElementById('gbar-gross');
+  barNet.style.width   = pctPct + '%';
+  barGross.style.width = grossPctVal + '%';
+  barNet.closest('[role="progressbar"]').setAttribute('aria-valuenow', Math.round(pctPct));
+  barGross.closest('[role="progressbar"]').setAttribute('aria-valuenow', Math.round(grossPctVal));
   document.getElementById('goal-missing').textContent = fmtEur(missing, 0);
 
   document.getElementById('gm-monthly').textContent = fmtEur(netDiv / 12, 0);
@@ -1243,12 +1268,11 @@ function renderGoal(grossDiv, netDiv) {
   }
 
   destroyChart('goal-chart');
-  const ctx = document.getElementById('goal-chart').getContext('2d');
-  goalChartInst = new Chart(ctx, {
+  new Chart(document.getElementById('goal-chart').getContext('2d'), {
     type: 'doughnut',
     data: {
       datasets: [{
-        data: [pct, 1 - pct],
+        data: [pctPct, 100 - pctPct],
         backgroundColor: [pct >= 1 ? '#3fb950' : '#58a6ff', '#21262d'],
         borderWidth: 0,
         hoverOffset: 0
@@ -1277,11 +1301,7 @@ function renderUebersicht(held) {
   doughnutChart('chart-type', tKeys, tKeys.map(k => typeVal[k]));
 
   // Country donut (by value)
-  const countryVal = {};
-  held.forEach(h => {
-    const c = h.country || 'Sonstige';
-    countryVal[c] = (countryVal[c] || 0) + h.value;
-  });
+  const countryVal = groupBy(held, 'country', 'value');
   const cKeys = Object.keys(countryVal).sort((a,b) => countryVal[b] - countryVal[a]).slice(0, 10);
   doughnutChart('chart-country', cKeys, cKeys.map(k => countryVal[k]));
 
@@ -1308,10 +1328,11 @@ function renderUebersicht(held) {
     .sort((a,b) => b.dividendYieldOnBuyin - a.dividendYieldOnBuyin).slice(0, 10);
   document.getElementById('top-by-yoc').innerHTML = topYoC.map((h, i) => {
     const yocGain = h.dividendYieldOnBuyin - h.dividendYield;
+    const improved = yocGain > YOC_DELTA_THRESHOLD;
     return `<div class="top-item">
       <span class="top-rank">${i+1}</span>
-      <div class="top-name">${escHtml(h.name)}<small>${escHtml(h.symbol)} &middot; ${yocGain > 0.003 ? '↑ ' : ''}aktuell ${fmtPct(h.dividendYield)}</small></div>
-      <div class="top-val ${yocGain > 0.003 ? 'pos' : ''}">${fmtPct(h.dividendYieldOnBuyin)}</div>
+      <div class="top-name">${escHtml(h.name)}<small>${escHtml(h.symbol)} &middot; ${improved ? '↑ ' : ''}aktuell ${fmtPct(h.dividendYield)}</small></div>
+      <div class="top-val ${improved ? 'pos' : ''}">${fmtPct(h.dividendYieldOnBuyin)}</div>
     </div>`;
   }).join('');
 }
@@ -1349,9 +1370,10 @@ function renderDividenden(held) {
   doughnutChart('chart-div-country', cdKeys, cdKeys.map(k => countryDiv[k]));
 
   // Monthly stacked by sector
-  const bySector  = monthlyBySector(held);
-  const secKeys   = Object.keys(bySector).sort((a,b) =>
-    bySector[b].reduce((s,v)=>s+v,0) - bySector[a].reduce((s,v)=>s+v,0));
+  const bySector = monthlyBySector(held);
+  const sectorTotals = {};
+  for (const [s, arr] of Object.entries(bySector)) sectorTotals[s] = arr.reduce((a, b) => a + b, 0);
+  const secKeys = Object.keys(bySector).sort((a, b) => sectorTotals[b] - sectorTotals[a]);
   barChart('chart-monthly-sector', MONTHS_DE,
     secKeys.map((s, i) => ({
       label: s,
@@ -1366,34 +1388,32 @@ function renderDividenden(held) {
 
 // ── Render Wachstum Tab ───────────────────────────────────────────────
 function renderWachstum(held) {
-  // Top 20 CAGR bar
-  const withCagr = held.filter(h => h.dividendCagr !== 0 && h.totalDividendRate > 0)
-    .sort((a,b) => b.dividendCagr - a.dividendCagr).slice(0, 20);
+  // Shared filtered set reused for both CAGR chart and histogram
+  const cagrHoldings = held.filter(h => h.dividendCagr !== 0 && h.totalDividendRate > 0);
 
-  barChart('chart-cagr',
-    withCagr.map(h => h.symbol),
-    [{
-      label: 'CAGR (5J)',
-      data: withCagr.map(h => +(h.dividendCagr * 100).toFixed(1)),
-      backgroundColor: withCagr.map(h => h.dividendCagr >= 0 ? 'rgba(63,185,80,.75)' : 'rgba(248,81,73,.75)'),
-      borderRadius: 4
-    }],
-    {
-      legend: false,
-      tooltipCb: { label: ctx => ` CAGR: ${ctx.raw.toFixed(1)} %` }
-    }
+  // Top 20 CAGR bar — build all three arrays in one pass
+  const top20 = [...cagrHoldings].sort((a, b) => b.dividendCagr - a.dividendCagr).slice(0, 20);
+  const cagrLabels = [], cagrData = [], cagrColors = [];
+  for (const h of top20) {
+    cagrLabels.push(h.symbol);
+    cagrData.push(+(h.dividendCagr * 100).toFixed(1));
+    cagrColors.push(h.dividendCagr >= 0 ? 'rgba(63,185,80,.75)' : 'rgba(248,81,73,.75)');
+  }
+  barChart('chart-cagr', cagrLabels,
+    [{ label: 'CAGR (5J)', data: cagrData, backgroundColor: cagrColors, borderRadius: 4 }],
+    { legend: false, tooltipCb: { label: ctx => ` CAGR: ${ctx.raw.toFixed(1)} %` } }
   );
 
-  // CAGR distribution histogram
+  // CAGR distribution histogram — reuse cagrHoldings
   const buckets = { '<0%': 0, '0-5%': 0, '5-10%': 0, '10-15%': 0, '>15%': 0 };
-  held.filter(h => h.dividendCagr !== 0 && h.totalDividendRate > 0).forEach(h => {
+  for (const h of cagrHoldings) {
     const c = h.dividendCagr * 100;
     if (c < 0) buckets['<0%']++;
     else if (c < 5) buckets['0-5%']++;
     else if (c < 10) buckets['5-10%']++;
     else if (c < 15) buckets['10-15%']++;
     else buckets['>15%']++;
-  });
+  }
   barChart('chart-cagr-dist',
     Object.keys(buckets),
     [{ label: 'Positionen', data: Object.values(buckets), backgroundColor: PALETTE, borderRadius: 4 }],
@@ -1412,12 +1432,12 @@ function renderWachstum(held) {
     { tooltipCb: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw.toFixed(2)} %` } }
   );
 
-  // Income path line chart
+  // Income path line chart — compute growth factors once, derive both paths
   const { grossDiv, avgCagr } = _stats;
-  const _cy = new Date().getFullYear();
-  const yearLabels  = Array.from({length: PROJECTION_YEARS + 1}, (_,i) => String(_cy + i));
-  const netPath     = yearLabels.map((_,i) => Math.round(grossDiv * Math.pow(1+avgCagr,i) * (1-TAX)));
-  const grossPath   = yearLabels.map((_,i) => Math.round(grossDiv * Math.pow(1+avgCagr,i)));
+  const yearLabels  = Array.from({length: PROJECTION_YEARS + 1}, (_, i) => String(CY + i));
+  const growthPow   = yearLabels.map((_, i) => Math.pow(1 + avgCagr, i));
+  const netPath     = growthPow.map(f => Math.round(grossDiv * f * (1 - TAX)));
+  const grossPath   = growthPow.map(f => Math.round(grossDiv * f));
   destroyChart('chart-income-path');
   new Chart(document.getElementById('chart-income-path').getContext('2d'), {
     type: 'line',
@@ -1439,28 +1459,28 @@ function renderWachstum(held) {
     }
   });
 
-  // Projection table
-  const tbody = document.getElementById('projection-body');
-  tbody.innerHTML = '';
+  // Projection table — collect rows first, set innerHTML once
+  const projRows = [];
   for (let y = 0; y <= 10; y++) {
-    const g = grossDiv * Math.pow(1 + avgCagr, y);
-    const n = g * (1 - TAX);
-    const pct = Math.min(n / GOAL * 100, 999);
-    const growth = y === 0 ? '–' : '+' + ((Math.pow(1 + avgCagr, y) - 1) * 100).toFixed(0) + '%';
-    const barW = Math.min(pct, 100).toFixed(0);
-    tbody.innerHTML += `<tr>
-      <td><strong>${_cy + y}</strong></td>
+    const f      = growthPow[y];
+    const g      = grossDiv * f;
+    const n      = g * (1 - TAX);
+    const pct    = Math.min(n / GOAL * 100, 100);
+    const growth = y === 0 ? '–' : '+' + ((f - 1) * 100).toFixed(0) + '%';
+    projRows.push(`<tr>
+      <td><strong>${CY + y}</strong></td>
       <td>${fmtEur(g, 0)}</td>
       <td class="${n >= GOAL ? 'pos' : ''}">${fmtEur(n, 0)}</td>
       <td>
         <div style="display:flex;align-items:center;gap:8px;">
-          <div class="bar-track" style="flex:1;max-width:120px"><div class="bar-fill ${n>=GOAL?'bar-green':'bar-blue'}" style="width:${barW}%"></div></div>
-          <span style="font-size:11px;color:var(--txt2)">${Math.min(pct,999).toFixed(0)}%</span>
+          <div class="bar-track" style="flex:1;max-width:120px"><div class="bar-fill ${n>=GOAL?'bar-green':'bar-blue'}" style="width:${pct.toFixed(0)}%"></div></div>
+          <span style="font-size:11px;color:var(--txt2)">${pct.toFixed(0)}%</span>
         </div>
       </td>
       <td style="color:var(--txt2)">${growth}</td>
-    </tr>`;
+    </tr>`);
   }
+  document.getElementById('projection-body').innerHTML = projRows.join('');
 }
 
 // ── Simulation engine ────────────────────────────────────────────────
@@ -1643,17 +1663,18 @@ function runSimulation() {
 }
 
 function setupSimulation() {
+  const runSim = debounce(runSimulation, 80);
   document.getElementById('sim-monthly').addEventListener('input', e => {
     document.getElementById('sim-monthly-val').textContent = fmtEur(+e.target.value, 0);
-    runSimulation();
+    runSim();
   });
   document.getElementById('sim-yield').addEventListener('input', e => {
     document.getElementById('sim-yield-val').textContent = (+e.target.value / 10).toFixed(1).replace('.', ',') + ' %';
-    runSimulation();
+    runSim();
   });
   document.getElementById('sim-cagr').addEventListener('input', e => {
     document.getElementById('sim-cagr-val').textContent = (+e.target.value / 10).toFixed(1).replace('.', ',') + ' %';
-    runSimulation();
+    runSim();
   });
   document.getElementById('sim-reinvest-toggle').addEventListener('click', () => {
     _simReinvest = !_simReinvest;
@@ -1671,7 +1692,7 @@ const AVG_MIETE      = 9600;          // ~800 €/mo avg rent including utilitie
 const FIRE_SWR       = 0.04;          // 4% safe withdrawal rate
 
 function renderFreiheit() {
-  const { grossDiv, netDiv, totalVal, totalInv } = _stats;
+  const { netDiv, totalVal, totalInv } = _stats;
 
   const perHour   = netDiv / (365 * 24);
   const freeHours = netDiv / (MINDESTLOHN / 2080);   // freed hours vs. min wage
@@ -1757,13 +1778,14 @@ function renderFreiheit() {
 
 // ── Render Kalender Tab ───────────────────────────────────────────────
 function renderKalender(held) {
-  const bd    = _stats.breakdown;
-  const maxG  = Math.max(...bd.map(m => m.gross));
-  const minG  = Math.min(...bd.filter(m => m.gross > 0).map(m => m.gross));
-  const sumG  = bd.reduce((s,m) => s + m.gross, 0);
+  const bd      = _stats.breakdown;
+  const nonZero = bd.map((m, i) => ({ ...m, i })).filter(m => m.gross > 0);
+  const maxG  = nonZero.length > 0 ? nonZero.reduce((a, b) => b.gross > a.gross ? b : a).gross : 0;
+  const minG  = nonZero.length > 0 ? nonZero.reduce((a, b) => b.gross < a.gross ? b : a).gross : 0;
+  const bestM = nonZero.length > 0 ? nonZero.reduce((a, b) => b.gross > a.gross ? b : a).i : 0;
+  const weakM = nonZero.length > 0 ? nonZero.reduce((a, b) => b.gross < a.gross ? b : a).i : 0;
+  const sumG  = bd.reduce((s, m) => s + m.gross, 0);
   const avgG  = sumG / 12;
-  const bestM = bd.indexOf(bd.reduce((a,b) => b.gross > a.gross ? b : a));
-  const weakM = bd.indexOf(bd.reduce((a,b) => b.gross < a.gross ? b : a));
 
   document.getElementById('cal-summary').innerHTML = `
     <div class="kpi-card">
@@ -1787,7 +1809,6 @@ function renderKalender(held) {
       <div class="kpi-sub">Einkommensschwankung</div>
     </div>`;
 
-  const MONTHS_FULL = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
   document.getElementById('cal-grid').innerHTML = bd.map((m, i) => {
     const pct = maxG > 0 ? m.gross / maxG : 0;
     const cls = pct >= 0.8 ? 'cal-top' : pct >= 0.5 ? 'cal-high' : pct >= 0.2 ? 'cal-med' : 'cal-low';
@@ -1858,9 +1879,14 @@ function renderAnalyse(held) {
   // Top-5 concentration
   const top5Pct = [...held].sort((a,b) => b.value - a.value).slice(0,5).reduce((s,h) => s + h.value, 0) / (totalVal || 1);
 
-  const yieldTrapPos = held.filter(h => h.dividendYield > 0.08 && h.totalDividendRate > 0);
-  const negCagrPos   = held.filter(h => h.dividendCagr < -0.001 && h.totalDividendRate > 0);
-  const divPositions = held.filter(h => h.totalDividendRate > 0).length;
+  const yieldTrapPos = [], negCagrPos = [];
+  let divPositions = 0;
+  for (const h of held) {
+    if (h.totalDividendRate <= 0) continue;
+    divPositions++;
+    if (h.dividendYield > 0.08) yieldTrapPos.push(h);
+    if (h.dividendCagr < -0.001) negCagrPos.push(h);
+  }
 
   document.getElementById('analyse-metrics').innerHTML = `
     <div class="metric-card">
@@ -2037,7 +2063,7 @@ function setupTableSort() {
       applyFilter();
     });
   });
-  document.getElementById('pos-search').addEventListener('input', applyFilter);
+  document.getElementById('pos-search').addEventListener('input', debounce(applyFilter, 100));
   document.getElementById('pos-filter-type').addEventListener('change', applyFilter);
   document.getElementById('pos-filter-held').addEventListener('change', applyFilter);
 }
@@ -2047,20 +2073,18 @@ function renderAll(rows, filename) {
   _lastRows = rows;
   if (filename) _lastFilename = filename;
   destroyAllCharts();
+
   const held = rows.filter(h => h.quantity > 0);
+  _heldCache = held;
   _stats = renderKPIs(held);
   _stats.breakdown = monthlyBreakdown(held);
   const { grossDiv, netDiv } = _stats;
   renderGoal(grossDiv, netDiv);
-  renderUebersicht(held);
-  renderDividenden(held);
-  renderWachstum(held);
-  renderMeilensteine(held);
-  renderSimulation(held);
-  renderFreiheit();
-  renderKalender(held);
-  renderAnalyse(held);
-  renderPositions(rows);
+
+  // Mark every tab dirty; render only the currently visible one immediately
+  _tabsNeedUpdate = new Set(ALL_TABS);
+  const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab ?? 'uebersicht';
+  renderTab(activeTab);
 
   const now = filename
     ? `${filename} · geladen am ${new Date().toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}`
@@ -2084,6 +2108,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.setAttribute('aria-selected', 'true');
     btn.setAttribute('tabindex', '0');
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    renderTab(btn.dataset.tab);
   });
   // Arrow-key navigation within tablist
   btn.addEventListener('keydown', e => {
